@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>阿尔法工坊 · 火山凤鸣</title>
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.1.0/fonts/remixicon.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    /* ===== 日期+状态栏 ===== */
+    .date-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+    .date-bar .date{font-size:.75rem;color:#64748b}
+    .status-badge{display:flex;align-items:center;gap:.5rem;padding:.5rem .75rem;border-radius:.5rem;background:#f1f5f9;border:1px solid #e2e8f0}
+    .status-badge .dot{width:.5rem;height:.5rem;border-radius:50%;background:#64748b}
+    .status-badge span{font-size:.75rem;font-weight:500;color:#475569}
+
+    /* ===== 5列指标卡 ===== */
+    .kpi-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1rem;margin-bottom:1.25rem}
+    @media(min-width:1024px){.kpi-grid{grid-template-columns:repeat(5,1fr)}}
+    .kpi-card{background:#fff;border:1px solid #e2e8f0;border-radius:.75rem;padding:1.25rem;transition:all .2s}
+    .kpi-card:hover{box-shadow:0 2px 8px rgba(0,0,0,.04)}
+    .kpi-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem}
+    .kpi-header .label{font-size:.75rem;font-weight:500;color:#64748b}
+    .kpi-icon{width:2rem;height:2rem;border-radius:.5rem;display:flex;align-items:center;justify-content:center;font-size:.875rem}
+    .kpi-value{font-size:1.25rem;font-weight:700;color:#0f172a;margin-bottom:.25rem}
+    .kpi-sub{font-size:.6875rem;color:#94a3b8}
+    .kpi-change{font-size:.6875rem;font-weight:500;margin-top:.375rem;padding-top:.5rem;border-top:1px dashed #e2e8f0}
+    .kpi-change.up{color:#dc2626}.kpi-change.down{color:#16a34a}.kpi-change.neutral{color:#475569}
+
+    /* ===== 时段播报 ===== */
+    .broadcast-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:.75rem;margin-bottom:1.25rem}
+    @media(min-width:1024px){.broadcast-grid{grid-template-columns:repeat(4,1fr)}}
+    .broadcast-card{border-radius:.75rem;padding:1rem;display:flex;flex-direction:column;gap:.625rem;transition:all .2s;background:#f8fafc;border:1px solid #e2e8f0;opacity:.75}
+    .broadcast-card .card-top{display:flex;align-items:center;justify-content:space-between}
+    .broadcast-card .card-title{font-size:.75rem;font-weight:700;color:#0f172a}
+    .broadcast-card .card-time{font-size:.75rem;color:#94a3b8}
+    .broadcast-card .card-body{font-size:.75rem;line-height:1.5;color:#cbd5e1}
+
+    /* ===== 资产曲线 + AI决策 横向布局 ===== */
+    .chart-decision-row{display:grid;grid-template-columns:1fr;gap:1.25rem;margin-bottom:1.25rem}
+    @media(min-width:1024px){.chart-decision-row{grid-template-columns:3fr 2fr}}
+
+    /* 资产曲线 */
+    .asset-chart-card{background:#fff;border:1px solid #e2e8f0;border-radius:.75rem;padding:1.25rem;height:100%}
+    .chart-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1rem}
+    .chart-top .title-area h3{font-size:.875rem;font-weight:600;color:#0f172a}
+    .chart-top .metrics{display:flex;gap:.75rem;margin-top:.375rem}
+    .chart-top .metric{font-size:.75rem;color:#94a3b8}
+    .chart-top .metric strong{font-weight:600}
+    .chart-top .metric .orange{color:#d97706}
+    .chart-top .metric .red{color:#dc2626}
+    .period-tabs{display:flex;gap:.25rem;padding:.25rem;background:#f1f5f9;border-radius:9999px}
+    .period-tab{padding:.25rem .625rem;border-radius:9999px;font-size:.75rem;font-weight:500;cursor:pointer;background:transparent;border:1px solid transparent;color:#94a3b8;transition:all .2s}
+    .period-tab.active{background:#fff;color:#d97706;border-color:rgba(245,166,35,.3)}
+    .chart-legend{display:flex;gap:1rem;margin-bottom:.75rem}
+    .legend-item{display:flex;align-items:center;gap:.375rem;font-size:.75rem;color:#64748b}
+    .legend-line{width:1rem;height:2px;border-radius:1px}
+    .svg-chart{width:100%;height:180px}
+
+    /* AI决策 */
+    .decision-card{background:#fff;border:1px solid #e2e8f0;border-radius:.75rem;padding:1.25rem;height:100%;display:flex;flex-direction:column}
+    .decision-card .badge{font-size:.625rem;padding:.125rem .375rem;border-radius:.25rem;background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0}
+    .decision-card .date-badge{font-size:.75rem;padding:.375rem .5rem;border-radius:9999px;background:rgba(245,166,35,.1);color:#d97706;border:1px solid rgba(245,166,35,.2)}
+    .decision-robot{display:flex;align-items:flex-start;gap:1rem;margin-bottom:1rem;flex:1}
+    .decision-robot .avatar{width:3rem;height:3rem;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;border:2px solid rgba(245,166,35,.3);background:rgba(245,166,35,.1)}
+    .decision-robot .avatar i{font-size:1.25rem;color:#d97706}
+    .decision-robot .name{font-size:.75rem;font-weight:600;color:#d97706;display:flex;align-items:center;gap:.375rem}
+    .decision-robot .name .live-dot{width:.375rem;height:.375rem;border-radius:50%;background:#22c55e;animation:pulse 2s ease-in-out infinite}
+    .decision-robot .text{font-size:.8125rem;line-height:1.6;color:#334155;margin-top:.5rem}
+    .decision-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;padding:.75rem 1rem;border-radius:.75rem;background:#f8fafc;border:1px solid #f1f5f9;margin-bottom:.75rem}
+    .decision-stat{text-align:center}
+    .decision-stat .val{font-size:.75rem;font-weight:700;color:#d97706}
+    .decision-stat .lbl{font-size:.75rem;color:#94a3b8;margin-top:.125rem}
+    .decision-btn{width:100%;padding:.75rem;border-radius:.75rem;font-size:.8125rem;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.5rem;background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.25);color:#d97706;transition:all .2s}
+    .decision-btn:hover{background:rgba(245,166,35,.15)}
+
+    /* ===== AI动态 + 持仓 横向布局 ===== */
+    .dynamics-holdings-row{display:grid;grid-template-columns:1fr;gap:1.25rem;margin-bottom:1.25rem}
+    @media(min-width:1024px){.dynamics-holdings-row{grid-template-columns:3fr 2fr}}
+
+    /* AI动态 */
+    .dynamics-card{background:#fff;border:1px solid #e2e8f0;border-radius:.75rem;padding:1.25rem;display:flex;flex-direction:column;min-height:380px}
+    .dynamics-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+    .dynamics-header .left{display:flex;align-items:center;gap:.5rem}
+    .dynamics-header .left h3{font-size:.875rem;font-weight:600;color:#0f172a}
+    .dynamics-header .live{display:flex;align-items:center;gap:.25rem}
+    .dynamics-header .live .dot{width:.375rem;height:.375rem;border-radius:50%;background:#22c55e}
+    .dynamics-header .live span{font-size:.75rem;color:#16a34a}
+    .dynamics-legend{display:flex;align-items:center;gap:.75rem}
+    .dynamics-legend .item{display:flex;align-items:center;gap:.25rem;font-size:.75rem;color:#94a3b8}
+    .dynamics-legend .item .dot{width:.375rem;height:.375rem;border-radius:50%}
+    .dynamics-list{flex:1;overflow:hidden;display:flex;flex-direction:column;gap:.5rem}
+    .dynamic-item{display:flex;align-items:flex-start;gap:.75rem;padding:.625rem .75rem;border-radius:.5rem;transition:all .2s}
+    .dynamic-item.skip{background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.15)}
+    .dynamic-item.watch{background:rgba(245,166,35,.07);border:1px solid rgba(245,166,35,.2)}
+    .dynamic-item.execute{background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.15)}
+    .dynamic-time{font-size:.75rem;font-family:monospace;color:#94a3b8;flex-shrink:0;margin-top:.125rem}
+    .dynamic-tag{font-size:.625rem;padding:.125rem .5rem;border-radius:.375rem;font-weight:500;flex-shrink:0;margin-top:.125rem}
+    .dynamic-tag.skip{background:rgba(59,130,246,.08);color:#3b82f6;border:1px solid rgba(59,130,246,.15)}
+    .dynamic-tag.watch{background:rgba(245,166,35,.08);color:#d97706;border:1px solid rgba(245,166,35,.2)}
+    .dynamic-tag.execute{background:rgba(34,197,94,.08);color:#16a34a;border:1px solid rgba(34,197,94,.15)}
+    .dynamic-text{font-size:.75rem;line-height:1.5;color:#334155;flex:1}
+    .dynamics-footer{margin-top:1rem;padding-top:.75rem;border-top:1px solid #f1f5f9;display:flex;align-items:center;gap:1rem}
+    .dynamics-footer .stat{font-size:.75rem;color:#94a3b8}
+    .dynamics-footer .stat strong{font-weight:700;color:#334155}
+    .dynamics-footer .stat .orange{color:#d97706}
+    .dynamics-footer .stat .green{color:#16a34a}
+
+    /* 持仓快照 */
+    .holdings-card{background:#fff;border:1px solid #e2e8f0;border-radius:.75rem;padding:1.25rem;display:flex;flex-direction:column;min-height:380px}
+    .holdings-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+    .holdings-header h3{font-size:.875rem;font-weight:600;color:#0f172a}
+    .holdings-header .view-btn{font-size:.75rem;font-weight:500;color:#d97706;cursor:pointer}
+    .holdings-table{width:100%;border-collapse:collapse}
+    .holdings-table th{text-align:left;padding:.5rem 0;font-size:.75rem;font-weight:500;color:#94a3b8}
+    .holdings-table th:last-child{text-align:right}
+    .holdings-table td{padding:.625rem 0;font-size:.75rem;border-top:1px solid #f1f5f9}
+    .holdings-table td:last-child{text-align:right}
+    .holdings-table tr{cursor:pointer;transition:background .15s}
+    .holdings-table tbody tr:hover{background:#f8fafc}
+    .h-stock-name{font-weight:600;color:#0f172a}
+    .h-stock-code{color:#94a3b8}
+    .h-pnl-pos{color:#dc2626}.h-pnl-neg{color:#16a34a}
+    .h-pct{display:flex;align-items:center;justify-content:flex-end;gap:.5rem}
+    .h-bar{width:3rem;height:.375rem;border-radius:9999px;background:#f1f5f9;overflow:hidden}
+    .h-bar-fill{height:100%;border-radius:9999px;background:#f5a623}
+    .holdings-total{margin-top:.75rem;padding-top:.75rem;border-top:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between}
+    .holdings-total .lbl{font-size:.75rem;color:#94a3b8}
+    .holdings-total .val{font-size:.8125rem;font-weight:700;color:#dc2626}
+
+    /* ===== 底部两列 ===== */
+    .bottom-row{display:grid;grid-template-columns:1fr;gap:1.25rem}
+    @media(min-width:1024px){.bottom-row{grid-template-columns:1fr 1fr}}
+    .bottom-card{background:#fff;border:1px solid #e2e8f0;border-radius:.75rem;padding:1rem}
+    .bottom-card h4{font-size:.8125rem;font-weight:600;color:#0f172a;display:flex;align-items:center;gap:.5rem;margin-bottom:.75rem}
+    .bottom-card h4 i{color:#f5a623;font-size:.875rem}
+
+    /* 财报日历 */
+    .calendar-empty{text-align:center;padding:1.5rem;color:#94a3b8;font-size:.75rem}
+
+    /* 持仓涨跌 */
+    .perf-row{display:grid;grid-template-columns:110px 1fr 64px;align-items:center;gap:.75rem;padding:.5rem 0}
+    .perf-row:not(:last-child){border-bottom:1px solid #f1f5f9}
+    .perf-name .name{font-size:.75rem;font-weight:500;color:#0f172a}
+    .perf-name .code{font-size:.625rem;font-family:monospace;color:#94a3b8}
+    .perf-bar{position:relative;height:.5rem;border-radius:9999px;background:#f1f5f9}
+    .perf-bar .fill{position:absolute;inset-y-0;left:0;border-radius:9999px;transition:all .3s}
+    .perf-val{font-size:.8125rem;font-weight:600;text-align:right;font-variant-numeric:tabular-nums}
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-left">
+      <button class="mobile-menu-btn" onclick="toggleSidebar()"><i class="ri-menu-line"></i></button>
+      <img alt="logo" class="logo-img" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjgiIGhlaWdodD0iMjgiIHZpZXdCb3g9IjAgMCAyOCAyOCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIxNCIgY3k9IjE0IiByPSIxNCIgZmlsbD0idXJsKCNncmFkKSIvPjx0ZXh0IHg9IjciIHk9IjIwIiBmb250LXNpemU9IjE0IiBmaWxsPSJ3aGl0ZSI+QUk8L3RleHQ+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJncmFkIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwJSIgc3R5bGU9InN0b3AtY29sb3I6cmdiKDI0NSwxNjYsMzUpIi8+PHN0b3Agb2Zmc2V0PSIxMDAlIiBzdHlsZT0ic3RvcC1jb2xvcjpyZ2IoMjMyLDE0OCwyNikiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48L3N2Zz4=">
+      <span class="logo-text">AI交易员</span>
+      <div class="market-badge"><span class="dot"></span>今日已收盘</div>
+    </div>
+    <div class="header-center">
+      <div class="index-item"><span class="label">上证指数</span><span class="value">4,090.481</span><span class="change down"><i class="ri-arrow-down-s-fill"></i>-0.43%</span></div>
+      <div class="index-item"><span class="label">深证成指</span><span class="value">16,030.702</span><span class="change up"><i class="ri-arrow-up-s-fill"></i>+0.94%</span></div>
+      <div class="index-item"><span class="label">创业板指</span><span class="value">4,252.39</span><span class="change up"><i class="ri-arrow-up-s-fill"></i>+2.05%</span></div>
+    </div>
+    <div class="header-right">
+      <span class="time" id="headerTime">19:01:31</span>
+      <div class="user-info" style="position:relative">
+        <div class="avatar">1</div>
+        <span class="username">181****8452</span>
+        <i class="ri-arrow-down-s-line arrow"></i>
+        <div class="user-dropdown">
+          <div class="dropdown-item" onclick="location.href='settings.html'"><i class="ri-user-line"></i>个人中心</div>
+          <div class="dropdown-item" onclick="location.href='settings.html'"><i class="ri-settings-4-line"></i>账户设置</div>
+          <div class="dropdown-item danger" onclick="location.href='index.html'"><i class="ri-logout-box-r-line"></i>退出登录</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <aside class="app-sidebar">
+    <nav class="sidebar-nav">
+      <div class="sidebar-section-title">主功能</div>
+      <a class="sidebar-link active" href="dashboard.html"><div class="icon"><i class="ri-dashboard-3-line"></i></div><span class="link-text">总览仪表盘</span><span class="badge-dot"></span></a>
+      <a class="sidebar-link" href="news.html"><div class="icon"><i class="ri-radar-line"></i></div><span class="link-text">热点新闻</span></a>
+      <a class="sidebar-link" href="stocks.html"><div class="icon"><i class="ri-robot-2-line"></i></div><span class="link-text">AI交易模拟盘</span></a>
+      <a class="sidebar-link" href="simtrade.html"><div class="icon"><i class="ri-swap-line"></i></div><span class="link-text">模拟交易</span></a>
+      <a class="sidebar-link" href="positions.html"><div class="icon"><i class="ri-briefcase-line"></i></div><span class="link-text">交易持仓</span></a>
+      <div class="sidebar-section-title" style="margin-top:1.25rem">工具</div>
+      <a class="sidebar-link" href="reports.html"><div class="icon"><i class="ri-bar-chart-2-line"></i></div><span class="link-text">交易报表</span></a>
+      <a class="sidebar-link" href="settings.html"><div class="icon"><i class="ri-settings-4-line"></i></div><span class="link-text">账户设置</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="ai-status-card">
+        <div class="status-row"><span class="status-dot"></span><span class="status-label">AI 待命中</span></div>
+        <div class="status-info">今日 AI 决策 0 条<br>实际下单 0 笔</div>
+        <div class="status-pnl">浮盈 +¥33,213</div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="app-main">
+    <div class="content">
+      <!-- 风险提示 -->
+      <div class="risk-banner">
+        <button class="risk-header" onclick="toggleRiskBanner(this)">
+          <div class="left"><i class="ri-shield-flash-line"></i><span class="title">风险提示</span><span class="tag">模拟交易</span></div>
+          <i class="ri-arrow-up-s-line arrow"></i>
+        </button>
+        <div class="risk-body">
+          <div class="risk-item"><span class="dot">·</span><p>本功能为模拟交易，使用虚拟资金，不涉及真实资金交易，仅供学习参考</p></div>
+          <div class="risk-item"><span class="dot">·</span><p>行情数据可能存在延迟，成交价格和时机仅供参考，不代表真实市场执行情况</p></div>
+          <div class="risk-item"><span class="dot">·</span><p>模拟盈利不代表实盘交易能力，历史绩效不构成未来收益保证</p></div>
+          <div class="risk-item"><span class="dot">·</span><p>投资有风险，入市需谨慎，请勿将模拟结果作为真实投资决策依据</p></div>
+        </div>
+      </div>
+
+      <!-- 日期 + 状态 -->
+      <div class="date-bar">
+        <div class="date">2026年6月19日星期五 · 今日已收盘</div>
+        <div class="status-badge"><span class="dot"></span><span>非交易日 · AI 暂停</span></div>
+      </div>
+
+      <!-- 5列指标卡 -->
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-header"><span class="label">模拟总资产</span><div class="kpi-icon" style="background:rgba(245,166,35,.094)"><i class="ri-funds-line" style="color:#f5a623"></i></div></div>
+          <div class="kpi-value">¥1,081,219.97</div>
+          <div class="kpi-sub">初始资金 ¥1,000,000</div>
+          <div class="kpi-change up">今日变化 +¥0 (+0.00%)</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-header"><span class="label">累计盈亏</span><div class="kpi-icon" style="background:rgba(220,38,38,.094)"><i class="ri-percent-line" style="color:#dc2626"></i></div></div>
+          <div class="kpi-value" style="color:#dc2626">+¥81,220</div>
+          <div class="kpi-sub">+8.12% 总收益</div>
+          <div class="kpi-change up">今日 +¥0（落袋 + 浮动）</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-header"><span class="label">落袋盈亏</span><div class="kpi-icon" style="background:rgba(220,38,38,.094)"><i class="ri-safe-line" style="color:#dc2626"></i></div></div>
+          <div class="kpi-value" style="color:#dc2626">+¥50,804</div>
+          <div class="kpi-sub">累计止盈 +¥72,321 · 累计止损 -¥24,816 · 手续费 -¥2,797</div>
+          <div class="kpi-change up">今日卖出兑现 +¥0</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-header"><span class="label">浮动盈亏</span><div class="kpi-icon" style="background:rgba(220,38,38,.094)"><i class="ri-line-chart-line" style="color:#dc2626"></i></div></div>
+          <div class="kpi-value" style="color:#dc2626">+¥33,213</div>
+          <div class="kpi-sub">4 只持仓 mark-to-market</div>
+          <div class="kpi-change up">今日涨跌 +¥0</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-header"><span class="label">持仓股票数</span><div class="kpi-icon" style="background:rgba(245,166,35,.094)"><i class="ri-briefcase-3-line" style="color:#f5a623"></i></div></div>
+          <div class="kpi-value">4 只</div>
+          <div class="kpi-sub">仓位使用率 52%</div>
+          <div class="kpi-change neutral">今日无持仓变动</div>
+        </div>
+      </div>
+
+      <!-- 时段播报 -->
+      <div style="margin-bottom:.75rem"><h3 style="font-size:.8125rem;font-weight:600;color:#0f172a;margin-bottom:.25rem">今日时段播报</h3><span style="font-size:.75rem;color:#94a3b8">A股交易日四时段</span></div>
+      <div class="broadcast-grid">
+        <div class="broadcast-card"><div class="card-top"><span class="card-title">09:30 开盘观察</span><i class="ri-error-warning-line" style="color:#f59e0b;font-size:.875rem"></i></div><span class="card-time">09:30 生成</span><p class="card-body">本时段播报暂未生成，请稍后查看。</p></div>
+        <div class="broadcast-card"><div class="card-top"><span class="card-title">10:30 盘中节奏</span><i class="ri-error-warning-line" style="color:#f59e0b;font-size:.875rem"></i></div><span class="card-time">10:30 更新</span><p class="card-body">本时段播报暂未生成，请稍后查看。</p></div>
+        <div class="broadcast-card"><div class="card-top"><span class="card-title">14:00 午后开盘</span><i class="ri-error-warning-line" style="color:#f59e0b;font-size:.875rem"></i></div><span class="card-time">14:00 更新</span><p class="card-body">本时段播报暂未生成，请稍后查看。</p></div>
+        <div class="broadcast-card"><div class="card-top"><span class="card-title">15:10 全天复盘</span><i class="ri-error-warning-line" style="color:#f59e0b;font-size:.875rem"></i></div><span class="card-time">15:10 生成</span><p class="card-body">本时段播报暂未生成，请稍后查看。</p></div>
+      </div>
+
+      <!-- 资产曲线 + AI决策 -->
+      <div class="chart-decision-row">
+        <div class="asset-chart-card">
+          <div class="chart-top">
+            <div class="title-area">
+              <h3>资产曲线</h3>
+              <div class="metrics">
+                <span class="metric"><strong class="red">+8.12%</strong> 近30日收益</span>
+              </div>
+              <div class="metrics" style="margin-top:.25rem">
+                <span class="metric">夏普 <strong class="orange">7.72</strong></span>
+                <span class="metric">最大回撤 <strong class="red">3.59%</strong></span>
+              </div>
+            </div>
+            <div class="period-tabs">
+              <button class="period-tab">周</button>
+              <button class="period-tab active">月</button>
+              <button class="period-tab">季</button>
+            </div>
+          </div>
+          <div class="chart-legend"><div class="legend-item"><div class="legend-line" style="background:#f5a623"></div>我的资产</div></div>
+          <svg class="svg-chart" viewBox="0 0 480 160">
+            <defs>
+              <linearGradient id="assetGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#F5A623" stop-opacity="0.2"/><stop offset="100%" stop-color="#F5A623" stop-opacity="0"/></linearGradient>
+              <linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#e8941a"/><stop offset="100%" stop-color="#F5A623"/></linearGradient>
+            </defs>
+            <line x1="50" y1="132" x2="464" y2="132" stroke="#f1f5f9" stroke-width="1"/><text x="44" y="136" text-anchor="end" font-size="9" fill="#94a3b8">96万</text>
+            <line x1="50" y1="102" x2="464" y2="102" stroke="#f1f5f9" stroke-width="1"/><text x="44" y="106" text-anchor="end" font-size="9" fill="#94a3b8">99万</text>
+            <line x1="50" y1="72" x2="464" y2="72" stroke="#f1f5f9" stroke-width="1"/><text x="44" y="76" text-anchor="end" font-size="9" fill="#94a3b8">102万</text>
+            <line x1="50" y1="42" x2="464" y2="42" stroke="#f1f5f9" stroke-width="1"/><text x="44" y="46" text-anchor="end" font-size="9" fill="#94a3b8">105万</text>
+            <line x1="50" y1="12" x2="464" y2="12" stroke="#f1f5f9" stroke-width="1"/><text x="44" y="16" text-anchor="end" font-size="9" fill="#94a3b8">108万</text>
+            <text x="50" y="156" text-anchor="middle" font-size="9" fill="#94a3b8">2026-05-21</text>
+            <text x="264" y="156" text-anchor="middle" font-size="9" fill="#94a3b8">2026-06-05</text>
+            <text x="464" y="156" text-anchor="middle" font-size="9" fill="#94a3b8">2026-06-19</text>
+            <path d="M50,94.6 L64.3,94.6 L78.6,94.6 L92.8,94.6 L107.1,94.6 L121.4,94.6 L135.7,94.6 L149.9,94.6 L164.2,94.6 L178.5,94.6 L192.8,94.6 L207,94.6 L221.3,94.6 L235.6,94.6 L249.9,94.6 L264.1,94.6 L278.4,94.6 L292.7,94.6 L307,94.6 L321.2,94.6 L335.5,100.1 L349.8,114.3 L364.1,130.1 L378.3,130.1 L392.6,130.1 L406.9,88.6 L421.2,70 L435.4,42.6 L449.7,14.1 L464,14.1 L464,132 L50,132 Z" fill="url(#assetGrad)"/>
+            <path d="M50,94.6 L64.3,94.6 L78.6,94.6 L92.8,94.6 L107.1,94.6 L121.4,94.6 L135.7,94.6 L149.9,94.6 L164.2,94.6 L178.5,94.6 L192.8,94.6 L207,94.6 L221.3,94.6 L235.6,94.6 L249.9,94.6 L264.1,94.6 L278.4,94.6 L292.7,94.6 L307,94.6 L321.2,94.6 L335.5,100.1 L349.8,114.3 L364.1,130.1 L378.3,130.1 L392.6,130.1 L406.9,88.6 L421.2,70 L435.4,42.6 L449.7,14.1 L464,14.1" fill="none" stroke="url(#lineGrad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="464" cy="14.1" r="4" fill="#F5A623" stroke="#fff" stroke-width="2"/>
+          </svg>
+        </div>
+
+        <div class="decision-card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+            <div style="display:flex;align-items:center;gap:.5rem"><h3 style="font-size:.875rem;font-weight:600;color:#0f172a">AI 今日决策摘要</h3><span class="badge">建议口播</span></div>
+            <span class="date-badge">2026年06月19日</span>
+          </div>
+          <div class="decision-robot">
+            <div class="avatar"><i class="ri-robot-2-line"></i></div>
+            <div>
+              <div class="name">AI 交易员 <span class="live-dot"></span></div>
+              <p class="text">今日暂无执行决策，AI 持续监控市场中…</p>
+            </div>
+          </div>
+          <div class="decision-stats">
+            <div class="decision-stat"><div class="val">20只</div><div class="lbl">今日扫描</div></div>
+            <div class="decision-stat"><div class="val">—</div><div class="lbl">执行</div></div>
+            <div class="decision-stat"><div class="val">15只</div><div class="lbl">候选</div></div>
+            <div class="decision-stat"><div class="val">100%</div><div class="lbl">仓位</div></div>
+          </div>
+          <button class="decision-btn"><i class="ri-route-line"></i>查看今日完整决策过程</button>
+        </div>
+      </div>
+
+      <!-- AI动态 + 持仓 -->
+      <div class="dynamics-holdings-row">
+        <div class="dynamics-card">
+          <div class="dynamics-header">
+            <div class="left"><h3>AI 实时分析动态</h3><div class="live"><span class="dot"></span><span>实时</span></div></div>
+            <div style="display:flex;align-items:center;gap:1rem">
+              <div class="dynamics-legend">
+                <div class="item"><span class="dot" style="background:#3b82f6"></span>分析跳过</div>
+                <div class="item"><span class="dot" style="background:#f5a623"></span>列入观察</div>
+                <div class="item"><span class="dot" style="background:#22c55e"></span>执行决策</div>
+              </div>
+              <span style="font-size:.75rem;font-weight:500;color:#d97706;cursor:pointer">查看全部</span>
+            </div>
+          </div>
+          <div class="dynamics-list">
+            <div class="dynamic-item skip">
+              <span class="dynamic-time">14:56</span>
+              <span class="dynamic-tag skip">🔍 分析跳过</span>
+              <p class="dynamic-text">工业富联(601138) 买入 未成交，未成交（风控:加上本单后「C39计算机、通信和其他电子设备制造业」行业持仓 ¥409695 超过 40% 上限 (¥400000)，跳过）。在持仓高度集中于高估值AI硬件标的（东山、海光PE超220x）背景下，工业富联以35.6x PE提供稀缺的估值锚点；基本面有订单支撑，技术面出现底部信号。仅为模拟演示。</p>
+            </div>
+            <div class="dynamic-item watch">
+              <span class="dynamic-time">14:47</span>
+              <span class="dynamic-tag watch">⚠️ 列入观察</span>
+              <p class="dynamic-text">中天科技(600522) 观察，综合四维分析：基本面估值最健康（PE18.2x/PEG0.9），新闻面政策受益明确且未透支，技术面趋势完好且无超买信号，持仓结构中浮盈适中、无T+1约束。仅为模拟演示。</p>
+            </div>
+            <div class="dynamic-item watch">
+              <span class="dynamic-time">14:38</span>
+              <span class="dynamic-tag watch">⚠️ 列入观察</span>
+              <p class="dynamic-text">中天科技(600522) 观察，综合四位分析师判断，中天科技是唯一获'强买'评级且无近期重复操作记录的标的；其技术面稳健、浮盈安全、未触T+1约束。仅为模拟演示。</p>
+            </div>
+            <div class="dynamic-item watch">
+              <span class="dynamic-time">14:26</span>
+              <span class="dynamic-tag watch">⚠️ 列入观察</span>
+              <p class="dynamic-text">中天科技(600522) 观察，综合四维分析：基本面受益G7资源协议且估值最健康；新闻面资金与板块共振明确；技术面MACD强多头且无超买警示。仅为模拟演示。</p>
+            </div>
+          </div>
+          <div class="dynamics-footer">
+            <div class="stat">今日已分析 <strong>50只</strong></div>
+            <div class="stat">候选 <strong class="orange">40只</strong></div>
+            <div class="stat">执行 <strong class="green">0笔</strong></div>
+          </div>
+        </div>
+
+        <div class="holdings-card">
+          <div class="holdings-header"><h3>持仓快照</h3><span class="view-btn" onclick="location.href='positions.html'">查看全部 <i class="ri-arrow-right-line"></i></span></div>
+          <table class="holdings-table">
+            <thead><tr><th>股票</th><th>浮动盈亏</th><th>市值占比</th></tr></thead>
+            <tbody>
+              <tr onclick="location.href='positions.html'"><td><div class="h-stock-name">亨通光电</div><div class="h-stock-code">600487</div></td><td><div class="h-pnl-neg">-0.14万</div><div class="h-pnl-neg">-0.99%</div></td><td><div class="h-pct"><div class="h-bar"><div class="h-bar-fill" style="width:26%"></div></div><span style="color:#64748b">26%</span></div></td></tr>
+              <tr onclick="location.href='positions.html'"><td><div class="h-stock-name">海光信息</div><div class="h-stock-code">688041</div></td><td><div class="h-pnl-pos">+0.90万</div><div class="h-pnl-pos">+10.06%</div></td><td><div class="h-pct"><div class="h-bar"><div class="h-bar-fill" style="width:17%"></div></div><span style="color:#64748b">17%</span></div></td></tr>
+              <tr onclick="location.href='positions.html'"><td><div class="h-stock-name">中天科技</div><div class="h-stock-code">600522</div></td><td><div class="h-pnl-pos">+0.59万</div><div class="h-pnl-pos">+3.85%</div></td><td><div class="h-pct"><div class="h-bar"><div class="h-bar-fill" style="width:28%"></div></div><span style="color:#64748b">28%</span></div></td></tr>
+              <tr onclick="location.href='positions.html'"><td><div class="h-stock-name">东山精密</div><div class="h-stock-code">002384</div></td><td><div class="h-pnl-pos">+1.98万</div><div class="h-pnl-pos">+13.75%</div></td><td><div class="h-pct"><div class="h-bar"><div class="h-bar-fill" style="width:29%"></div></div><span style="color:#64748b">29%</span></div></td></tr>
+            </tbody>
+          </table>
+          <div class="holdings-total"><span class="lbl">总浮动盈亏</span><span class="val">+¥33,213</span></div>
+        </div>
+      </div>
+
+      <!-- 底部两列 -->
+      <div class="bottom-row">
+        <div class="bottom-card">
+          <h4><i class="ri-calendar-event-line"></i>财报日历 <span style="font-size:.6875rem;font-weight:400;color:#94a3b8;margin-left:auto">持仓 4 只</span></h4>
+          <div class="calendar-empty">近期无重要日程（财报披露/业绩预告/限售解禁）</div>
+        </div>
+        <div class="bottom-card">
+          <h4><i class="ri-line-chart-line"></i>持仓股今日涨跌 <span style="font-size:.6875rem;font-weight:400;color:#94a3b8;margin-left:auto">4 只 · 截至 19:01</span></h4>
+          <div class="perf-row"><div class="perf-name"><div class="name">东山精密</div><div class="code">002384</div></div><div class="perf-bar"><div class="fill" style="width:100%;background:rgba(220,38,38,.85)"></div></div><div class="perf-val" style="color:#dc2626">+13.75%</div></div>
+          <div class="perf-row"><div class="perf-name"><div class="name">海光信息</div><div class="code">688041</div></div><div class="perf-bar"><div class="fill" style="width:73%;background:rgba(220,38,38,.85)"></div></div><div class="perf-val" style="color:#dc2626">+10.06%</div></div>
+          <div class="perf-row"><div class="perf-name"><div class="name">中天科技</div><div class="code">600522</div></div><div class="perf-bar"><div class="fill" style="width:28%;background:rgba(220,38,38,.85)"></div></div><div class="perf-val" style="color:#dc2626">+3.85%</div></div>
+          <div class="perf-row"><div class="perf-name"><div class="name">亨通光电</div><div class="code">600487</div></div><div class="perf-bar"><div class="fill" style="width:7%;background:rgba(22,163,74,.85)"></div></div><div class="perf-val" style="color:#16a34a">-0.99%</div></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- AI 对话按钮 -->
+  <button class="ai-chat-btn"><span class="ping"></span><img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIxNiIgY3k9IjE2IiByPSIxNiIgZmlsbD0idXJsKCNnKSIvPjx0ZXh0IHg9IjgiIHk9IjIyIiBmb250LXNpemU9IjE2IiBmaWxsPSJ3aGl0ZSI+QUk8L3RleHQ+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJnIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwJSIgc3R5bGU9InN0b3AtY29sb3I6cmdiKDI0NSwxNjYsMzUpIi8+PHN0b3Agb2Zmc2V0PSIxMDAlIiBzdHlsZT0ic3RvcC1jb2xvcjpyZ2IoMjMyLDE0OCwyNikiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48L3N2Zz4=" alt="AI"><span class="btn-text">AI 交易员，点击对话</span><span class="online-dot"></span></button>
+
+  <!-- AI 对话框 -->
+  <div class="ai-chat-dialog">
+    <div class="ai-chat-header">
+      <div class="left">
+        <div class="icon"><i class="ri-robot-2-line"></i></div>
+        <div class="info">
+          <div class="name">AI 交易员</div>
+          <div class="status"><span class="dot"></span>在线</div>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="ai-chat-pause"><i class="ri-pause-line"></i></button>
+        <button class="ai-chat-close"><i class="ri-close-line"></i></button>
+      </div>
+    </div>
+    <div class="ai-chat-quick">
+      <button class="quick-question">今日买了什么</button>
+      <button class="quick-question">当前仓位怎样</button>
+      <button class="quick-question">最新决策原因</button>
+      <button class="quick-question">明日策略</button>
+    </div>
+    <div class="ai-chat-messages">
+      <div class="ai-msg bot">
+        <div class="ai-msg-avatar"><i class="ri-robot-2-line"></i></div>
+        <div class="ai-msg-bubble">你好！我是 AI 交易员，今日为休市日，我处于待命状态。你可以点击上方快捷按钮或直接输入问题。</div>
+      </div>
+      <div class="ai-analysis-item">
+        <div style="font-size:.6875rem;color:#94a3b8;margin-bottom:.25rem">14:47 · ⚠️ 列入观察</div>
+        <div style="font-size:.75rem;color:#334155;line-height:1.5">中天科技(600522) 观察，综合四维分析：基本面估值最健康（PE18.2x/PEG0.9），新闻面政策受益明确且未透支，技术面趋势完好且无超买信号。</div>
+      </div>
+      <div class="ai-analysis-item">
+        <div style="font-size:.6875rem;color:#94a3b8;margin-bottom:.25rem">14:38 · ⚠️ 列入观察</div>
+        <div style="font-size:.75rem;color:#334155;line-height:1.5">中天科技(600522) 观察，综合四位分析师判断，中天科技是唯一获'强买'评级且无近期重复操作记录的标的。</div>
+      </div>
+      <div class="ai-analysis-item">
+        <div style="font-size:.6875rem;color:#94a3b8;margin-bottom:.25rem">14:56 · 🔍 分析跳过</div>
+        <div style="font-size:.75rem;color:#334155;line-height:1.5">工业富联(601138) 买入 未成交，风控:行业持仓超过40%上限，跳过。</div>
+      </div>
+    </div>
+    <div class="ai-chat-input">
+      <div class="input-row">
+        <textarea placeholder="输入消息..." rows="1"></textarea>
+        <button class="ai-send-btn"><i class="ri-send-plane-fill"></i></button>
+      </div>
+    </div>
+  </div>
+  <div class="customer-service">
+    <div class="cs-header"><div class="info"><div class="cs-icon"><i class="ri-customer-service-2-line"></i></div><div><div class="cs-name">在线客服</div><div class="cs-status"><span class="dot"></span><span>在线</span></div></div></div><button class="minimize-btn" onclick="toggleCustomerService()"><i class="ri-subtract-line"></i></button></div>
+    <div class="cs-messages"><div class="cs-msg user"><div><div class="bubble">收费标准是什么？</div><div class="time">21:11</div></div></div><div class="cs-msg bot"><div class="bot-avatar"><i class="ri-customer-service-2-line"></i></div><div><div class="bubble">1:年付9886元（送2000元能量补贴券），充值可以直接抵扣<br>2:半年6886元（送1500元能量补贴券），充值可以直接抵扣<br>3:季度4886元（送1000元能量补贴券），充值可以直接抵扣<br>4:月付2886元</div><div class="time">09:03</div></div></div></div>
+    <div class="cs-input-area"><div class="cs-input-row"><textarea placeholder="输入消息..." rows="1"></textarea><button class="send-btn" disabled><i class="ri-send-plane-fill"></i></button></div><p class="cs-hint">Enter 发送</p></div>
+  </div>
+  <script src="shared.js"></script>
+  <script>setInterval(()=>{const e=document.getElementById('headerTime');if(e)e.textContent=new Date().toLocaleTimeString('zh-CN',{hour12:false})},1000)</script>
+</body>
+</html>

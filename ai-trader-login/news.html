@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>热点新闻 · AI交易员</title>
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.1.0/fonts/remixicon.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .news-tabs { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+    .news-tab {
+      padding: 0.5rem 1rem; border-radius: 9999px; font-size: 0.8125rem; font-weight: 500;
+      cursor: pointer; border: 1px solid #e2e8f0; background: #fff; color: #64748b;
+      transition: all 0.2s;
+    }
+    .news-tab.active { background: rgb(245,166,35); color: #fff; border-color: rgb(245,166,35); }
+    .news-tab:hover:not(.active) { background: #f8fafc; }
+
+    .source-tabs { display: flex; gap: 0.25rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .source-tab {
+      padding: 0.375rem 0.75rem; border-radius: 0.375rem; font-size: 0.75rem;
+      cursor: pointer; background: transparent; border: 1px solid transparent;
+      color: #94a3b8; transition: all 0.2s;
+    }
+    .source-tab.active { background: #fff; color: rgb(217,119,6); border-color: rgba(245,166,35,0.3); }
+
+    .news-list { display: flex; flex-direction: column; gap: 0.75rem; }
+    .news-item {
+      display: flex; gap: 1rem; padding: 1rem; border-radius: 0.75rem;
+      background: #fff; border: 1px solid #e2e8f0; cursor: pointer;
+      transition: all 0.2s;
+    }
+    .news-item:hover { border-color: rgba(245,166,35,0.3); box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+    .news-rank {
+      width: 1.75rem; height: 1.75rem; border-radius: 0.375rem; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.75rem; font-weight: 700; background: #f1f5f9; color: #64748b;
+    }
+    .news-rank.top { background: rgba(220,38,38,0.1); color: rgb(220,38,38); }
+    .news-body { flex: 1; min-width: 0; }
+    .news-meta { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.375rem; }
+    .news-tag {
+      font-size: 0.625rem; padding: 0.125rem 0.375rem; border-radius: 0.25rem;
+    }
+    .news-tag.major { background: rgba(220,38,38,0.1); color: rgb(220,38,38); }
+    .news-tag.normal { background: rgba(100,116,139,0.1); color: #64748b; }
+    .news-time { font-size: 0.6875rem; color: #94a3b8; }
+    .news-title { font-size: 0.875rem; font-weight: 500; color: #0f172a; line-height: 1.6; }
+    .news-title em { font-style: normal; color: rgb(220,38,38); }
+    .news-impact {
+      margin-top: 0.5rem; padding: 0.5rem 0.75rem; border-radius: 0.375rem;
+      background: #f8fafc; font-size: 0.75rem; color: #64748b; line-height: 1.5;
+    }
+    .filter-row { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+    .filter-btn {
+      padding: 0.375rem 0.75rem; border-radius: 0.375rem; font-size: 0.75rem;
+      cursor: pointer; background: #fff; border: 1px solid #e2e8f0; color: #64748b;
+      transition: all 0.2s;
+    }
+    .filter-btn.active { background: rgb(245,166,35); color: #fff; border-color: rgb(245,166,35); }
+  </style>
+</head>
+<body>
+  <!-- 复用 header/sidebar 结构 (同 dashboard) -->
+  <header class="app-header">
+    <div class="header-left">
+      <button class="mobile-menu-btn" onclick="toggleSidebar()"><i class="ri-menu-line"></i></button>
+      <img alt="logo" class="logo-img" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjgiIGhlaWdodD0iMjgiIHZpZXdCb3g9IjAgMCAyOCAyOCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIxNCIgY3k9IjE0IiByPSIxNCIgZmlsbD0idXJsKCNncmFkKSIvPjx0ZXh0IHg9IjciIHk9IjIwIiBmb250LXNpemU9IjE0IiBmaWxsPSJ3aGl0ZSI+QUk8L3RleHQ+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJncmFkIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwJSIgc3R5bGU9InN0b3AtY29sb3I6cmdiKDI0NSwxNjYsMzUpIi8+PHN0b3Agb2Zmc2V0PSIxMDAlIiBzdHlsZT0ic3RvcC1jb2xvcjpyZ2IoMjMyLDE0OCwyNikiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48L3N2Zz4=">
+      <span class="logo-text">AI交易员</span>
+      <div class="market-badge"><span class="dot"></span>今日已收盘</div>
+    </div>
+    <div class="header-center">
+      <div class="index-item"><span class="label">上证指数</span><span class="value">4,090.481</span><span class="change down"><i class="ri-arrow-down-s-fill"></i>-0.43%</span></div>
+      <div class="index-item"><span class="label">深证成指</span><span class="value">16,030.702</span><span class="change up"><i class="ri-arrow-up-s-fill"></i>+0.94%</span></div>
+      <div class="index-item"><span class="label">创业板指</span><span class="value">4,252.39</span><span class="change up"><i class="ri-arrow-up-s-fill"></i>+2.05%</span></div>
+    </div>
+    <div class="header-right">
+      <span class="time" id="headerTime">18:40:26</span>
+      <div class="user-info" style="position:relative"><div class="avatar">1</div><span class="username">181****8452</span><i class="ri-arrow-down-s-line arrow"></i><div class="user-dropdown"><div class="dropdown-item" onclick="location.href='settings.html'"><i class="ri-user-line"></i>个人中心</div><div class="dropdown-item" onclick="location.href='settings.html'"><i class="ri-settings-4-line"></i>账户设置</div><div class="dropdown-item danger" onclick="location.href='index.html'"><i class="ri-logout-box-r-line"></i>退出登录</div></div></div>
+    </div>
+  </header>
+  <aside class="app-sidebar">
+    <nav class="sidebar-nav">
+      <div class="sidebar-section-title">主功能</div>
+      <a class="sidebar-link" href="dashboard.html"><div class="icon"><i class="ri-dashboard-3-line"></i></div><span class="link-text">总览仪表盘</span></a>
+      <a class="sidebar-link active" href="news.html"><div class="icon"><i class="ri-radar-line"></i></div><span class="link-text">热点新闻</span></a>
+      <a class="sidebar-link" href="stocks.html"><div class="icon"><i class="ri-robot-2-line"></i></div><span class="link-text">AI交易模拟盘</span><span class="badge-dot"></span></a>
+      <a class="sidebar-link" href="simtrade.html"><div class="icon"><i class="ri-swap-line"></i></div><span class="link-text">模拟交易</span></a>
+      <a class="sidebar-link" href="positions.html"><div class="icon"><i class="ri-briefcase-line"></i></div><span class="link-text">交易持仓</span></a>
+      <div class="sidebar-section-title" style="margin-top:1.25rem;">工具</div>
+      <a class="sidebar-link" href="reports.html"><div class="icon"><i class="ri-bar-chart-2-line"></i></div><span class="link-text">交易报表</span></a>
+      <a class="sidebar-link" href="settings.html"><div class="icon"><i class="ri-settings-4-line"></i></div><span class="link-text">账户设置</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="ai-status-card">
+        <div class="status-row"><span class="status-dot"></span><span class="status-label">AI 待命中</span></div>
+        <div class="status-info">今日 AI 决策 0 条<br>实际下单 0 笔</div>
+        <div class="status-pnl">浮盈 +¥33,213</div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="app-main">
+    <div class="content">
+      <div class="news-tabs">
+        <button class="news-tab active">热榜新闻</button>
+        <button class="news-tab">利好监控</button>
+      </div>
+      <div class="source-tabs">
+        <button class="source-tab active">全部</button>
+        <button class="source-tab">今日头条</button>
+        <button class="source-tab">财联社</button>
+        <button class="source-tab">微博</button>
+        <button class="source-tab">知乎</button>
+        <button class="source-tab">澎湃</button>
+        <button class="source-tab">凤凰财经</button>
+        <button class="source-tab">华尔街见闻</button>
+      </div>
+      <div class="filter-row">
+        <button class="filter-btn active">全部</button>
+        <button class="filter-btn">重大</button>
+        <button class="filter-btn">一般</button>
+      </div>
+      <div class="news-list" id="newsList"></div>
+    </div>
+  </main>
+
+  <!-- AI 对话按钮 -->
+  <button class="ai-chat-btn"><span class="ping"></span><img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIxNiIgY3k9IjE2IiByPSIxNiIgZmlsbD0idXJsKCNnKSIvPjx0ZXh0IHg9IjgiIHk9IjIyIiBmb250LXNpemU9IjE2IiBmaWxsPSJ3aGl0ZSI+QUk8L3RleHQ+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJnIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwJSIgc3R5bGU9InN0b3AtY29sb3I6cmdiKDI0NSwxNjYsMzUpIi8+PHN0b3Agb2Zmc2V0PSIxMDAlIiBzdHlsZT0ic3RvcC1jb2xvcjpyZ2IoMjMyLDE0OCwyNikiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48L3N2Zz4=" alt="AI"><span class="btn-text">AI 交易员，点击对话</span><span class="online-dot"></span></button>
+
+  <!-- AI 对话框 -->
+  <div class="ai-chat-dialog">
+    <div class="ai-chat-header">
+      <div class="left">
+        <div class="icon"><i class="ri-robot-2-line"></i></div>
+        <div class="info">
+          <div class="name">AI 交易员</div>
+          <div class="status"><span class="dot"></span>在线</div>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="ai-chat-pause"><i class="ri-pause-line"></i></button>
+        <button class="ai-chat-close"><i class="ri-close-line"></i></button>
+      </div>
+    </div>
+    <div class="ai-chat-quick">
+      <button class="quick-question">今日买了什么</button>
+      <button class="quick-question">当前仓位怎样</button>
+      <button class="quick-question">最新决策原因</button>
+      <button class="quick-question">明日策略</button>
+    </div>
+    <div class="ai-chat-messages">
+      <div class="ai-msg bot">
+        <div class="ai-msg-avatar"><i class="ri-robot-2-line"></i></div>
+        <div class="ai-msg-bubble">你好！我是 AI 交易员，有什么可以帮你的？</div>
+      </div>
+    </div>
+    <div class="ai-chat-input">
+      <div class="input-row">
+        <textarea placeholder="输入消息..." rows="1"></textarea>
+        <button class="ai-send-btn"><i class="ri-send-plane-fill"></i></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="customer-service">
+    <div class="cs-header">
+      <div class="info"><div class="cs-icon"><i class="ri-customer-service-2-line"></i></div><div><div class="cs-name">在线客服</div><div class="cs-status"><span class="dot"></span><span>在线</span></div></div></div>
+      <button class="minimize-btn cs-minimize"><i class="ri-subtract-line"></i></button>
+    </div>
+    <div class="cs-messages">
+      <div class="cs-msg user"><div><div class="bubble">收费标准是什么？</div><div class="time">21:11</div></div></div>
+      <div class="cs-msg bot"><div class="bot-avatar"><i class="ri-customer-service-2-line"></i></div><div><div class="bubble">1:年付9886元（送2000元能量补贴券）<br>2:半年6886元（送1500元能量补贴券）<br>3:季度4886元（送1000元能量补贴券）<br>4:月付2886元</div><div class="time">09:03</div></div></div>
+    </div>
+    <div class="cs-input-area">
+      <div class="cs-input-row"><textarea placeholder="输入消息..." rows="1"></textarea><button class="send-btn" disabled><i class="ri-send-plane-fill"></i></button></div>
+      <p class="cs-hint">Enter 发送</p>
+    </div>
+  </div>
+  <script src="shared.js"></script>
+  <script>
+    const newsData = [
+      { rank: 1, level: '一般', time: '06/19 18:35', title: '【5月阿根廷碳酸锂出口量为10026.72吨】', impact: '阿根廷5月碳酸锂出口量数据公布，对全球锂供给有参考意义，但短期对A股锂板块影响有限。' },
+      { rank: 2, level: '一般', time: '06/19 18:34', title: '以色列总理内塔尼亚胡：以色列绝不容忍针对以色列士兵和领土的袭击。', impact: '以色列强硬表态，可能短暂推高地缘政治风险溢价，对能源和避险资产有微弱影响。' },
+      { rank: 3, level: '一般', time: '06/19 18:33', title: '俄罗斯央行：将评估在即将召开的会议上进一步降息的必要性。', impact: '俄罗斯央行暗示未来可能进一步降息，增加政策不确定性，对相关市场有微弱影响。' },
+      { rank: 4, level: '一般', time: '06/19 18:32', title: '俄罗斯央行降息25个基点，市场预期为降息50个基点。', impact: '实际降息低于预期，表明货币政策收紧程度高于预期，卢布可能获得支撑。' },
+      { rank: 5, level: '一般', time: '06/19 18:30', title: '俄罗斯至6月19日央行利率决定 14.25%，预期14.00%，前值14.50%。', impact: '降息幅度小于市场预期，实际利率偏高，对俄罗斯债市形成压力。' },
+      { rank: 6, level: '重大', time: '06/19 18:27', title: '广东：加快建设全国一体化算力网络粤港澳大湾区枢纽，前瞻布局6G技术与卫星互联网。', impact: '广东出台政策支持算力网络和6G布局，利好相关科技基础设施企业。' },
+      { rank: 7, level: '一般', time: '06/19 18:26', title: '美国总统特朗普：意大利总理梅洛尼在G7峰会上恳求与我合影。', impact: '国际领导人社交花絮，不涉及经济或政策实质内容，对资本市场无直接影响。' },
+      { rank: 8, level: '一般', time: '06/19 18:25', title: '美国总统特朗普：欧洲人在能源和移民问题上表现不佳。', impact: '反映美欧政策分歧，未提出具体行动措施，对金融市场短期冲击有限。' },
+      { rank: 9, level: '重大', time: '06/19 18:23', title: '广东省：支持广州期货交易所丰富期货产品体系，完善全期货产业链。', impact: '政策明确支持广州期货交易所发展，利好期货行业及相关上市公司。' },
+      { rank: 10, level: '一般', time: '06/19 18:10', title: '三峡枢纽新通道先行开挖区预计今年10月完成开挖任务。', impact: '三峡新通道工程进展顺利，对水利基建板块有积极信号。' },
+      { rank: 11, level: '重大', time: '06/19 18:08', title: '超百艘满载油轮仍滞留波斯湾。', impact: '尽管美伊达成协议，实际通行仍受阻，原油供应风险持续，油价获支撑。' },
+      { rank: 12, level: '一般', time: '06/19 17:58', title: '高盛维持2026年下半年TTF天然气价格预测基本不变，为41欧元/兆瓦时。', impact: '高盛维持天然气价格预测不变，预示短期内价格预期稳定。' },
+    ];
+    const list = document.getElementById('newsList');
+    newsData.forEach(n => {
+      const isMajor = n.level === '重大';
+      list.innerHTML += `
+        <div class="news-item">
+          <div class="news-rank ${n.rank <= 3 ? 'top' : ''}">${n.rank}</div>
+          <div class="news-body">
+            <div class="news-meta">
+              <span class="news-tag ${isMajor ? 'major' : 'normal'}">${n.level}</span>
+              <span class="news-time">${n.time}</span>
+            </div>
+            <div class="news-title">${n.title}</div>
+            <div class="news-impact">${n.impact}</div>
+          </div>
+        </div>`;
+    });
+    setInterval(() => {
+      const el = document.getElementById('headerTime');
+      if (el) el.textContent = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+    }, 1000);
+  </script>
+</body>
+</html>

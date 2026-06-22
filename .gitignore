@@ -1,0 +1,6 @@
+.openclaw/
+node_modules/
+*.log
+.env
+.DS_Store
+Thumbs.db
