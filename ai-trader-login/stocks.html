@@ -8,53 +8,167 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="shared.css">
   <style>
-    .market-close-banner {
-      border-radius: 0.75rem; padding: 1rem 1.25rem; margin-bottom: 1.25rem;
+    .page-layout {
+      display: flex; flex-direction: column; gap: 1rem;
+      height: calc(100vh - 3.5rem - 3rem); overflow: hidden;
+    }
+    @media (min-width: 1024px) {
+      .page-layout { flex-direction: row; }
+    }
+    .stock-list-panel {
+      width: 100%; flex-shrink: 0; background: #fff; border: 1px solid #e2e8f0;
+      border-radius: 0.75rem; overflow: hidden; display: flex; flex-direction: column;
+    }
+    @media (min-width: 1024px) { .stock-list-panel { width: 200px; } }
+    .stock-list-header {
+      padding: 0.75rem; display: flex; align-items: center; justify-content: space-between;
+      border-bottom: 1px solid #f1f5f9; flex-shrink: 0;
+    }
+    .stock-search {
+      position: relative; margin-bottom: 0.5rem; flex-shrink: 0; padding: 0 0.5rem;
+    }
+    .stock-search input {
+      width: 100%; padding: 0.5rem 0.5rem 0.5rem 1.75rem; border-radius: 0.5rem;
+      font-size: 0.75rem; background: #f8fafc; border: 1px solid #e2e8f0;
+      color: #0f172a; outline: none;
+    }
+    .stock-search i { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); font-size: 0.75rem; color: #94a3b8; }
+    .stock-list {
+      flex: 1; overflow-y: auto; padding: 0.25rem 0.5rem;
+    }
+    .stock-item {
+      padding: 0.625rem 0.5rem; border-radius: 0.75rem; cursor: pointer;
+      transition: all 0.2s; border: 1px solid transparent; margin-bottom: 0.125rem;
+    }
+    .stock-item:hover { background: #f8fafc; }
+    .stock-item.active {
+      background: rgba(245,166,35,0.08); border: 1px solid rgba(245,166,35,0.25);
+    }
+    .stock-item .si-name { font-size: 0.75rem; font-weight: 600; color: #0f172a; }
+    .stock-item .si-code { font-size: 0.625rem; color: #94a3b8; }
+    .stock-item .si-price { font-size: 0.75rem; font-weight: 700; text-align: right; }
+    .stock-item .si-change { font-size: 0.625rem; font-weight: 500; text-align: right; }
+
+    .main-panel {
+      flex: 1; display: flex; flex-direction: column; gap: 1rem;
+      overflow-y: auto; min-height: 0;
+    }
+    .stock-detail-header {
+      display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+      padding: 1rem 1.25rem; background: #fff; border: 1px solid #e2e8f0;
+      border-radius: 0.75rem;
+    }
+    .stock-detail-header .sd-name { font-size: 0.875rem; font-weight: 700; color: #0f172a; }
+    .stock-detail-header .sd-code { font-size: 0.75rem; color: #94a3b8; margin-left: 0.5rem; }
+    .stock-detail-header .sd-price { font-size: 1.25rem; font-weight: 700; color: #dc2626; }
+    .stock-detail-header .sd-change {
+      font-size: 0.875rem; font-weight: 600; padding: 0.125rem 0.5rem;
+      border-radius: 0.25rem; background: rgba(220,38,38,0.1); color: #dc2626;
+    }
+    .stock-detail-header .sd-stats {
+      display: flex; gap: 1.5rem; margin-left: auto; flex-wrap: wrap;
+    }
+    .stock-detail-header .sd-stat .label { font-size: 0.75rem; color: #64748b; }
+    .stock-detail-header .sd-stat .val { font-size: 0.875rem; font-weight: 600; color: #0f172a; margin-top: 0.125rem; }
+
+    .chart-area {
+      background: #fff; border: 1px solid #e2e8f0; border-radius: 0.75rem;
+      padding: 1rem; flex: 1; display: flex; flex-direction: column; min-height: 300px;
+    }
+    .chart-toolbar {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 0.75rem; flex-shrink: 0;
+    }
+    .chart-type-tabs {
+      display: flex; gap: 0.125rem; padding: 0.125rem; background: #f1f5f9;
+      border-radius: 0.5rem;
+    }
+    .chart-type-tab {
+      padding: 0.25rem 0.75rem; border-radius: 0.375rem; font-size: 0.75rem;
+      font-weight: 500; cursor: pointer; background: transparent;
+      border: none; color: #94a3b8; transition: all 0.2s;
+    }
+    .chart-type-tab.active {
+      background: #fff; color: #0f172a; box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    .chart-legend-row {
+      display: flex; gap: 0.75rem; font-size: 0.75rem; color: #94a3b8;
+    }
+    .chart-legend-row span { display: flex; align-items: center; gap: 0.25rem; }
+    .chart-legend-row .block { width: 0.5rem; height: 0.5rem; border-radius: 0.125rem; }
+    .kline-placeholder {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      color: #94a3b8; font-size: 0.875rem;
+    }
+
+    .ai-analysis-box {
+      background: rgba(245,166,35,0.04); border: 1px solid rgba(245,166,35,0.25);
+      border-radius: 0.75rem; padding: 0.75rem 1rem; flex-shrink: 0;
+    }
+    .ai-analysis-box .aa-header {
+      display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;
+    }
+    .ai-analysis-box .aa-header i { color: #d97706; font-size: 0.875rem; }
+    .ai-analysis-box .aa-header .title { font-size: 0.75rem; font-weight: 600; color: #92400e; }
+    .ai-analysis-box .aa-header .spacer { flex: 1; }
+    .ai-analysis-box .aa-header .note { font-size: 0.75rem; color: #94a3b8; }
+    .analyst-row {
+      display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.375rem;
+    }
+    .analyst-item {
+      display: flex; align-items: center; gap: 0.375rem; font-size: 0.75rem;
+    }
+    .analyst-item .emoji { font-size: 0.875rem; }
+    .analyst-item .name { color: #64748b; }
+    .analyst-item .verdict { font-weight: 600; color: #94a3b8; }
+    .ai-analysis-box .aa-footer { font-size: 0.75rem; color: #94a3b8; margin-top: 0.25rem; }
+
+    .weekend-banner {
+      border-radius: 0.75rem; padding: 1rem 1.25rem;
       background: linear-gradient(135deg, rgba(245,166,35,0.08), rgba(220,38,38,0.04));
       border: 1px solid rgba(245,166,35,0.2);
     }
-    .market-close-banner .title-row { display: flex; align-items: baseline; gap: 0.75rem; margin-bottom: 0.5rem; }
-    .market-close-banner .title-row i { color: rgb(217,119,6); }
-    .market-close-banner .title { font-size: 1rem; font-weight: 700; color: rgb(146,64,14); }
-    .market-close-banner .sub { font-size: 0.75rem; color: rgba(146,64,14,0.7); }
-    .quick-btns { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
-    .quick-btn {
-      padding: 0.375rem 0.75rem; border-radius: 0.375rem; font-size: 0.75rem; font-weight: 500;
-      cursor: pointer; background: #fff; border: 1px solid rgba(245,166,35,0.3);
-      color: rgb(217,119,6); transition: all 0.2s;
+    .weekend-banner .wb-title {
+      font-size: 1rem; font-weight: 700; color: #92400e;
+      display: flex; align-items: baseline; gap: 0.75rem;
     }
-    .quick-btn:hover { background: rgba(245,166,35,0.05); }
+    .weekend-banner .wb-sub { font-size: 0.75rem; color: #92400e; opacity: 0.7; }
+    .weekend-banner .wb-actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+    .weekend-banner .wb-btn {
+      padding: 0.375rem 0.75rem; border-radius: 0.375rem; font-size: 0.75rem;
+      font-weight: 500; cursor: pointer; background: #fff;
+      border: 1px solid rgba(245,166,35,0.3); color: #d97706;
+    }
 
-    .market-card { margin-bottom: 1rem; }
-    .market-card h3 { font-size: 0.875rem; font-weight: 700; color: #0f172a; margin-bottom: 0.75rem; }
-    .market-grid { display: flex; gap: 2rem; }
-    .market-col { flex: 1; }
-    .market-col .col-title { font-size: 0.75rem; font-weight: 600; color: #64748b; margin-bottom: 0.5rem; }
-    .market-row { display: flex; justify-content: space-between; font-size: 0.75rem; padding: 0.375rem 0; }
+    .market-overview {
+      background: #fff; border: 1px solid #e2e8f0; border-radius: 0.75rem; padding: 1rem;
+    }
+    .market-grid { display: flex; gap: 2rem; flex-wrap: wrap; }
+    .market-col { flex: 1; min-width: 150px; }
+    .market-col .mc-title { font-size: 0.75rem; font-weight: 600; color: #64748b; margin-bottom: 0.5rem; }
+    .market-row { display: flex; justify-content: space-between; font-size: 0.75rem; margin-bottom: 0.375rem; }
     .market-row .name { color: #0f172a; }
     .market-row .val { font-weight: 600; }
-    .market-row .val.up { color: rgb(220,38,38); }
-    .market-row .val.down { color: rgb(22,163,74); }
 
-    .announcement-card h3 { font-size: 0.875rem; font-weight: 700; color: #0f172a; margin-bottom: 0.75rem; }
-    .announcement-list { max-height: 18rem; overflow-y: auto; }
-    .announcement-item {
+    .announcement-card {
+      background: #fff; border: 1px solid #e2e8f0; border-radius: 0.75rem; padding: 1rem;
+    }
+    .announcement-card .ann-item {
       display: flex; align-items: flex-start; gap: 0.5rem; font-size: 0.75rem;
-      padding: 0.375rem 0; border-bottom: 1px solid #f8fafc;
+      margin-bottom: 0.375rem;
     }
-    .announcement-item .date { color: #94a3b8; flex-shrink: 0; }
-    .announcement-item .tag {
-      padding: 0.125rem 0.375rem; border-radius: 0.25rem; flex-shrink: 0;
-      background: rgba(245,166,35,0.1); color: rgb(217,119,6); font-size: 0.625rem;
+    .announcement-card .ann-date { color: #94a3b8; flex-shrink: 0; }
+    .announcement-card .ann-tag {
+      padding: 0 0.375rem; border-radius: 0.125rem; flex-shrink: 0;
+      background: rgba(245,166,35,0.1); color: #d97706;
     }
-    .announcement-item .text { color: #0f172a; flex: 1; line-height: 1.5; }
 
-    .must-read {
-      border-radius: 0.75rem; padding: 1rem 1.25rem;
+    .weekly-summary {
       background: rgba(99,102,241,0.04); border: 1px solid rgba(99,102,241,0.15);
+      border-radius: 0.75rem; padding: 1rem;
     }
-    .must-read h3 { font-size: 0.875rem; font-weight: 700; color: #4338ca; margin-bottom: 0.75rem; }
-    .must-read p { font-size: 0.75rem; color: #3730a3; line-height: 1.7; white-space: pre-line; }
+    .weekly-summary .ws-title { font-size: 0.875rem; font-weight: 700; color: #4338ca; margin-bottom: 0.75rem; }
+    .weekly-summary p { font-size: 0.75rem; line-height: 1.6; color: #3730a3; white-space: pre-line; }
   </style>
 </head>
 <body>
@@ -75,6 +189,7 @@
       <div class="user-info" style="position:relative"><div class="avatar">1</div><span class="username">181****8452</span><i class="ri-arrow-down-s-line arrow"></i><div class="user-dropdown"><div class="dropdown-item" onclick="location.href='settings.html'"><i class="ri-user-line"></i>个人中心</div><div class="dropdown-item" onclick="location.href='settings.html'"><i class="ri-settings-4-line"></i>账户设置</div><div class="dropdown-item danger" onclick="location.href='index.html'"><i class="ri-logout-box-r-line"></i>退出登录</div></div></div>
     </div>
   </header>
+
   <aside class="app-sidebar">
     <nav class="sidebar-nav">
       <div class="sidebar-section-title">主功能</div>
@@ -98,6 +213,7 @@
 
   <main class="app-main">
     <div class="content">
+      <!-- 风险提示 -->
       <div class="risk-banner">
         <button class="risk-header" onclick="toggleRiskBanner(this)">
           <div class="left"><i class="ri-shield-flash-line"></i><span class="title">风险提示</span><span class="tag">模拟交易</span></div>
@@ -111,67 +227,67 @@
         </div>
       </div>
 
-      <h2 style="font-size:1.125rem;font-weight:700;color:#0f172a;margin-bottom:0.25rem;">AI交易模拟盘</h2>
-      <p style="font-size:0.75rem;color:#64748b;margin-bottom:1.25rem;">休市日精选视图：上周复盘 + 海外行情 + 重要公告 + 节后必看</p>
+      <h2 style="font-size:1.125rem;font-weight:700;color:#0f172a;margin-bottom:0.125rem;">AI交易模拟盘</h2>
+      <p style="font-size:0.75rem;color:#64748b;margin-bottom:1rem;">休市日精选视图：上周复盘 + 海外行情 + 重要公告 + 节后必看</p>
 
-      <!-- 休市提示 -->
-      <div class="market-close-banner">
-        <div class="title-row">
-          <i class="ri-calendar-close-line"></i>
-          <span class="title">休市中（2026-06-19）</span>
-          <span class="sub">下个交易日 6/22（周一）</span>
+      <!-- 休市横幅 -->
+      <div class="weekend-banner" style="margin-bottom:1rem;">
+        <div class="wb-title">
+          <i class="ri-calendar-close-line" style="font-size:1rem;"></i>
+          <span>休市中（2026-06-19）</span>
+          <span class="wb-sub">下个交易日 6/22（周一）</span>
         </div>
-        <div class="quick-btns">
-          <button class="quick-btn">上周复盘 →</button>
-          <button class="quick-btn">近期公告 →</button>
-          <button class="quick-btn">节后必看 →</button>
+        <div class="wb-actions">
+          <button class="wb-btn">上周复盘 →</button>
+          <button class="wb-btn">近期公告 →</button>
+          <button class="wb-btn">节后必看 →</button>
         </div>
       </div>
 
       <!-- 上周行情 -->
-      <div class="card market-card">
-        <h3>📈 上周行情</h3>
+      <div class="market-overview" style="margin-bottom:1rem;">
+        <h3 style="font-size:0.875rem;font-weight:700;color:#0f172a;margin-bottom:0.75rem;">📊 上周行情</h3>
         <div class="market-grid">
           <div class="market-col">
-            <div class="col-title">国内</div>
-            <div class="market-row"><span class="name">上证指数</span><span class="val up">4090.48 (+2.60%)</span></div>
-            <div class="market-row"><span class="name">深证成指</span><span class="val up">16030.70 (+7.94%)</span></div>
-            <div class="market-row"><span class="name">创业板指</span><span class="val up">4252.39 (+11.57%)</span></div>
+            <div class="mc-title">国内</div>
+            <div class="market-row"><span class="name">上证指数</span><span class="val" style="color:#dc2626;">4090.48 (+2.60%)</span></div>
+            <div class="market-row"><span class="name">深证成指</span><span class="val" style="color:#dc2626;">16030.70 (+7.94%)</span></div>
+            <div class="market-row"><span class="name">创业板指</span><span class="val" style="color:#dc2626;">4252.39 (+11.57%)</span></div>
           </div>
           <div class="market-col">
-            <div class="col-title">美股</div>
-            <div class="market-row"><span class="name">道琼斯</span><span class="val up">51564.70 (+0.14%)</span></div>
-            <div class="market-row"><span class="name">纳斯达克</span><span class="val up">26517.93 (+1.91%)</span></div>
+            <div class="mc-title">美股</div>
+            <div class="market-row"><span class="name">道琼斯</span><span class="val" style="color:#dc2626;">51564.70 (+0.14%)</span></div>
+            <div class="market-row"><span class="name">纳斯达克</span><span class="val" style="color:#dc2626;">26517.93 (+1.91%)</span></div>
           </div>
           <div class="market-col">
-            <div class="col-title">港股</div>
-            <div class="market-row"><span class="name">恒生中资企业</span><span class="val up">4438.30 (+0.10%)</span></div>
-            <div class="market-row"><span class="name">恒生中国企业</span><span class="val up">8550.87 (+0.89%)</span></div>
-            <div class="market-row"><span class="name">恒生指数</span><span class="val up">25606.03 (+0.86%)</span></div>
+            <div class="mc-title">港股</div>
+            <div class="market-row"><span class="name">恒生香港中资企业指数</span><span class="val" style="color:#dc2626;">4438.30 (+0.10%)</span></div>
+            <div class="market-row"><span class="name">恒生中国企业指数</span><span class="val" style="color:#dc2626;">8550.87 (+0.89%)</span></div>
+            <div class="market-row"><span class="name">恒生指数</span><span class="val" style="color:#dc2626;">25606.03 (+0.86%)</span></div>
           </div>
         </div>
       </div>
 
-      <!-- 重要公告 -->
-      <div class="card announcement-card" style="margin-bottom:1rem;">
-        <h3>🔥 周末重要公告</h3>
-        <div class="announcement-list">
-          <div class="announcement-item"><span class="date">6/19</span><span class="tag">sz002240</span><span class="text">[买入] 公司事件点评报告：锂盐锂资源产能持续增长，木绒锂矿将开工建设</span></div>
-          <div class="announcement-item"><span class="date">6/19</span><span class="tag">sz002240</span><span class="text">[增持] 年报点评：锂业务迎量价齐升，木绒矿大规模建设即将启动</span></div>
-          <div class="announcement-item"><span class="date">6/19</span><span class="tag">sz002240</span><span class="text">[买入] 2025年报点评：Q4锂价上涨毛利率提升，26年再上台阶</span></div>
-          <div class="announcement-item"><span class="date">6/19</span><span class="tag">sz002240</span><span class="text">[买入] 2025年三季报点评：Q3印尼工厂开始出货，业绩实现扭亏</span></div>
-          <div class="announcement-item"><span class="date">6/19</span><span class="tag">sz002240</span><span class="text">[增持] 2025年半年报点评：减值拖累业绩，加速资源一体化布局</span></div>
-          <div class="announcement-item"><span class="date">6/19</span><span class="tag">sz002240</span><span class="text">[买入] 2025年一季报点评：Q1费用高企导致亏损，印尼冶炼厂即将放量</span></div>
-          <div class="announcement-item"><span class="date">6/19</span><span class="tag">sz002240</span><span class="text">[增持] 年报点评：锂价短期低迷不改公司中长期发展规划</span></div>
-          <div class="announcement-item"><span class="date">6/19</span><span class="tag">sz002240</span><span class="text">[增持] 2024年年报点评：自有矿产量提升明显，减值拖累业绩</span></div>
-          <div class="announcement-item"><span class="date">6/19</span><span class="tag">sz002240</span><span class="text">[增持] 动态报告：木绒锂矿获得采矿证，资源保障迈出关键一步</span></div>
-          <div class="announcement-item"><span class="date">6/19</span><span class="tag">sz002240</span><span class="text">[买入] 取得木绒锂矿采矿许可证，资源保障能力迎来突破</span></div>
+      <!-- 周末重要公告 -->
+      <div class="announcement-card" style="margin-bottom:1rem;">
+        <h3 style="font-size:0.875rem;font-weight:700;color:#0f172a;margin-bottom:0.75rem;">🔥 周末重要公告</h3>
+        <div style="max-height:18rem;overflow-y:auto;">
+          <div class="ann-item"><span class="ann-date">6/19</span><span class="ann-tag">sz002240</span><span style="flex:1;color:#0f172a;">[买入] 公司事件点评报告：锂盐锂资源产能持续增长，木绒锂矿将开工建设</span></div>
+          <div class="ann-item"><span class="ann-date">6/19</span><span class="ann-tag">sz002240</span><span style="flex:1;color:#0f172a;">[增持] 年报点评：锂业务迎量价齐升，木绒矿大规模建设即将启动</span></div>
+          <div class="ann-item"><span class="ann-date">6/19</span><span class="ann-tag">sz002240</span><span style="flex:1;color:#0f172a;">[买入] 2025年报点评：Q4锂价上涨毛利率提升，26年再上台阶</span></div>
+          <div class="ann-item"><span class="ann-date">6/19</span><span class="ann-tag">sz002240</span><span style="flex:1;color:#0f172a;">[买入] 2025年三季报点评：Q3印尼工厂开始出货，业绩实现扭亏</span></div>
+          <div class="ann-item"><span class="ann-date">6/19</span><span class="ann-tag">sz002240</span><span style="flex:1;color:#0f172a;">[增持] 2025年半年报点评：减值拖累业绩，加速资源一体化布局</span></div>
+          <div class="ann-item"><span class="ann-date">6/19</span><span class="ann-tag">sz002240</span><span style="flex:1;color:#0f172a;">[买入] 2025年一季报点评：Q1费用高企导致亏损，印尼冶炼厂即将放量</span></div>
+          <div class="ann-item"><span class="ann-date">6/19</span><span class="ann-tag">sz002240</span><span style="flex:1;color:#0f172a;">[增持] 年报点评：锂价短期低迷不改公司中长期发展规划</span></div>
+          <div class="ann-item"><span class="ann-date">6/19</span><span class="ann-tag">sz002240</span><span style="flex:1;color:#0f172a;">[增持] 2024年年报点评：自有矿产量提升明显，减值拖累业绩</span></div>
+          <div class="ann-item"><span class="ann-date">6/19</span><span class="ann-tag">sz002240</span><span style="flex:1;color:#0f172a;">[增持] 动态报告：木绒锂矿获得采矿证，资源保障迈出关键一步</span></div>
+          <div class="ann-item"><span class="ann-date">6/19</span><span class="ann-tag">sz002240</span><span style="flex:1;color:#0f172a;">[买入] 取得木绒锂矿采矿许可证，资源保障能力迎来突破</span></div>
         </div>
       </div>
 
       <!-- 节后必看 -->
-      <div class="must-read">
-        <h3>📅 节后第一日开盘前必看</h3>
+      <div class="weekly-summary">
+        <h3 class="ws-title">📅 节后第一日开盘前必看</h3>
         <p>各位听众朋友，周末好。上周市场温和上扬，沪指站上四千点，创业板指同步走强，但个股分化显著：北交所与科创板弹性品种领涨，而部分高位科技股遭遇获利回吐。展望下周，主线或延续轮动格局，建议聚焦业绩确定性，留意低位启动信号，仅供参考。</p>
       </div>
     </div>
@@ -180,20 +296,10 @@
   <!-- AI 对话按钮 -->
   <button class="ai-chat-btn"><span class="ping"></span><img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIxNiIgY3k9IjE2IiByPSIxNiIgZmlsbD0idXJsKCNnKSIvPjx0ZXh0IHg9IjgiIHk9IjIyIiBmb250LXNpemU9IjE2IiBmaWxsPSJ3aGl0ZSI+QUk8L3RleHQ+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJnIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwJSIgc3R5bGU9InN0b3AtY29sb3I6cmdiKDI0NSwxNjYsMzUpIi8+PHN0b3Agb2Zmc2V0PSIxMDAlIiBzdHlsZT0ic3RvcC1jb2xvcjpyZ2IoMjMyLDE0OCwyNikiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48L3N2Zz4=" alt="AI"><span class="btn-text">AI 交易员，点击对话</span><span class="online-dot"></span></button>
 
-  <!-- AI 对话框 -->
   <div class="ai-chat-dialog">
     <div class="ai-chat-header">
-      <div class="left">
-        <div class="icon"><i class="ri-robot-2-line"></i></div>
-        <div class="info">
-          <div class="name">AI 交易员</div>
-          <div class="status"><span class="dot"></span>在线</div>
-        </div>
-      </div>
-      <div class="actions">
-        <button class="ai-chat-pause"><i class="ri-pause-line"></i></button>
-        <button class="ai-chat-close"><i class="ri-close-line"></i></button>
-      </div>
+      <div class="left"><div class="icon"><i class="ri-robot-2-line"></i></div><div class="info"><div class="name">AI 交易员</div><div class="status"><span class="dot"></span>在线</div></div></div>
+      <div class="actions"><button class="ai-chat-pause"><i class="ri-pause-line"></i></button><button class="ai-chat-close"><i class="ri-close-line"></i></button></div>
     </div>
     <div class="ai-chat-quick">
       <button class="quick-question">今日买了什么</button>
@@ -202,24 +308,78 @@
       <button class="quick-question">明日策略</button>
     </div>
     <div class="ai-chat-messages">
-      <div class="ai-msg bot">
-        <div class="ai-msg-avatar"><i class="ri-robot-2-line"></i></div>
-        <div class="ai-msg-bubble">你好！我是 AI 交易员，有什么可以帮你的？</div>
-      </div>
+      <div class="ai-msg bot"><div class="ai-msg-avatar"><i class="ri-robot-2-line"></i></div><div class="ai-msg-bubble">你好！我是 AI 交易员，有什么可以帮你的？</div></div>
     </div>
-    <div class="ai-chat-input">
-      <div class="input-row">
-        <textarea placeholder="输入消息..." rows="1"></textarea>
-        <button class="ai-send-btn"><i class="ri-send-plane-fill"></i></button>
-      </div>
-    </div>
+    <div class="ai-chat-input"><div class="input-row"><textarea placeholder="输入消息..." rows="1"></textarea><button class="ai-send-btn"><i class="ri-send-plane-fill"></i></button></div></div>
   </div>
+
   <div class="customer-service">
     <div class="cs-header"><div class="info"><div class="cs-icon"><i class="ri-customer-service-2-line"></i></div><div><div class="cs-name">在线客服</div><div class="cs-status"><span class="dot"></span><span>在线</span></div></div></div><button class="minimize-btn cs-minimize"><i class="ri-subtract-line"></i></button></div>
-    <div class="cs-messages"><div class="cs-msg user"><div><div class="bubble">收费标准是什么？</div><div class="time">21:11</div></div></div><div class="cs-msg bot"><div class="bot-avatar"><i class="ri-customer-service-2-line"></i></div><div><div class="bubble">1:年付9886元<br>2:半年6886元<br>3:季度4886元<br>4:月付2886元</div><div class="time">09:03</div></div></div></div>
+    <div class="cs-messages"><div class="cs-msg user"><div><div class="bubble">收费标准是什么？</div><div class="time">21:11</div></div></div><div class="cs-msg bot"><div class="bot-avatar"><i class="ri-customer-service-2-line"></i></div><div><div class="bubble">1:年付9886元（送2000元能量补贴券）<br>2:半年6886元（送1500元能量补贴券）<br>3:季度4886元（送1000元能量补贴券）<br>4:月付2886元</div><div class="time">09:03</div></div></div></div>
     <div class="cs-input-area"><div class="cs-input-row"><textarea placeholder="输入消息..." rows="1"></textarea><button class="send-btn" disabled><i class="ri-send-plane-fill"></i></button></div><p class="cs-hint">Enter 发送</p></div>
   </div>
+
+      <script src="api-config.js"></script>
+  <script src="data-store.js"></script>
   <script src="shared.js"></script>
-  <script>setInterval(()=>{const e=document.getElementById('headerTime');if(e)e.textContent=new Date().toLocaleTimeString('zh-CN',{hour12:false})},1000)</script>
+  <script>
+    // 4位分析师接入 API
+    const analystEmoji = { fundamental: '💼', quant: '📈', capital: '📡', industry: '📰' };
+    const analystNames = { fundamental: '财报研究员', quant: '量化交易员', capital: '资金分析师', industry: '行业研究员' };
+
+    // 点击自选股时触发分析
+    document.querySelectorAll('.wl-item, .stock-item').forEach(item => {
+      item.addEventListener('click', async () => {
+        const name = item.querySelector('.wl-name, .si-name')?.textContent;
+        const code = item.querySelector('.wl-code, .si-code')?.textContent;
+        if (!name) return;
+
+        // 更新选中状态
+        document.querySelectorAll('.wl-item, .stock-item').forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+
+        // 分析中状态
+        document.querySelectorAll('.analyst-item .verdict').forEach(v => v.textContent = '分析中...');
+
+        // 并行调用4位分析师
+        const analysts = Object.entries(AI_SYSTEM_PROMPTS.analysts);
+        const promises = analysts.map(([key, prompt]) =>
+          callAI([
+            { role: 'system', content: prompt },
+            { role: 'user', content: `分析 ${name}(${code})，当前市场环境下给出你的专业判断。50字内。` }
+          ], { max_tokens: 150 })
+        );
+
+        const results = await Promise.all(promises);
+        document.querySelectorAll('.analyst-item .verdict').forEach((v, i) => {
+          v.textContent = results[i] || '—';
+          v.style.color = '#334155';
+        });
+      });
+    });
+
+    // 初始加载时自动分析第一个股票
+    (async function() {
+      const first = document.querySelector('.wl-item.active, .stock-item.active');
+      if (first) {
+        const name = first.querySelector('.wl-name, .si-name')?.textContent;
+        const code = first.querySelector('.wl-code, .si-code')?.textContent;
+        if (name && code) {
+          const analysts = Object.entries(AI_SYSTEM_PROMPTS.analysts);
+          const promises = analysts.map(([key, prompt]) =>
+            callAI([
+              { role: 'system', content: prompt },
+              { role: 'user', content: `分析 ${name}(${code})。50字内。` }
+            ], { max_tokens: 150 })
+          );
+          const results = await Promise.all(promises);
+          document.querySelectorAll('.analyst-item .verdict').forEach((v, i) => {
+            v.textContent = results[i] || '—';
+            v.style.color = '#334155';
+          });
+        }
+      }
+    })();
+  </script>
 </body>
 </html>

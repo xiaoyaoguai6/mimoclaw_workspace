@@ -8,79 +8,53 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="shared.css">
   <style>
+    .report-toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem; }
     .period-tabs { display: flex; gap: 0.25rem; padding: 0.25rem; background: #f1f5f9; border-radius: 9999px; }
-    .period-tab {
-      padding: 0.375rem 1rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500;
-      cursor: pointer; background: transparent; border: 1px solid transparent;
-      color: #94a3b8; transition: all 0.2s; white-space: nowrap;
-    }
-    .period-tab.active { background: #fff; color: rgb(217,119,6); border-color: rgba(245,166,35,0.3); }
-    .export-btn {
-      display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem;
-      border-radius: 0.5rem; font-size: 0.75rem; font-weight: 500; cursor: pointer;
-      background: rgba(245,166,35,0.08); border: 1px solid rgba(245,166,35,0.2);
-      color: rgb(217,119,6); transition: all 0.2s;
-    }
+    .period-tab { padding: 0.375rem 1rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500; cursor: pointer; background: transparent; border: 1px solid transparent; color: #94a3b8; transition: all 0.2s; }
+    .period-tab.active { background: #fff; color: #d97706; border: 1px solid rgba(245,166,35,0.3); }
+    .export-btn { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; border-radius: 0.5rem; font-size: 0.75rem; font-weight: 500; cursor: pointer; background: rgba(245,166,35,0.08); border: 1px solid rgba(245,166,35,0.2); color: #d97706; transition: all 0.2s; }
     .export-btn:hover { background: rgba(245,166,35,0.15); }
 
-    .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
+    .summary-grid { display: grid; grid-template-columns: 1fr; gap: 1.25rem; margin-bottom: 1.25rem; }
+    @media (min-width: 1024px) { .summary-grid { grid-template-columns: 1fr 2fr; } }
+    .summary-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 0.75rem; padding: 1.25rem; }
+    .summary-card .sc-label { font-size: 0.75rem; color: #64748b; margin-bottom: 0.5rem; }
+    .summary-card .sc-value { font-size: 3rem; font-weight: 900; color: #dc2626; margin-bottom: 0.25rem; }
+    .summary-card .sc-sub { font-size: 0.75rem; color: #94a3b8; margin-bottom: 1rem; }
+    .summary-card .sc-footer { padding-top: 0.75rem; border-top: 1px solid #f1f5f9; }
+    .summary-card .sc-footer .fl { font-size: 0.75rem; color: #94a3b8; }
+    .summary-card .sc-footer .fv { font-size: 1.25rem; font-weight: 700; color: #0f172a; }
+
+    .chart-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 0.75rem; padding: 1.25rem; margin-bottom: 1.25rem; }
+    .chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem; }
+    .chart-header .ch-title { font-size: 0.875rem; font-weight: 600; color: #0f172a; }
+    .chart-legend { display: flex; gap: 1rem; }
+    .chart-legend span { display: flex; align-items: center; gap: 0.375rem; font-size: 0.75rem; color: #94a3b8; cursor: help; }
+    .chart-legend .line { width: 1rem; height: 2px; }
+    .chart-legend .dashed { width: 1rem; height: 0; border-top: 2px dashed; }
+
+    .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; margin-bottom: 1.25rem; }
     @media (min-width: 640px) { .stats-grid { grid-template-columns: repeat(3, 1fr); } }
     @media (min-width: 1024px) { .stats-grid { grid-template-columns: repeat(6, 1fr); } }
-    .stat-card {
-      background: #fff; border: 1px solid #e2e8f0; border-radius: 0.75rem;
-      padding: 1rem; text-align: center;
-    }
-    .stat-icon {
-      width: 2rem; height: 2rem; border-radius: 0.5rem; margin: 0 auto 0.5rem;
-      display: flex; align-items: center; justify-content: center; font-size: 0.875rem;
-    }
-    .stat-value { font-size: 1rem; font-weight: 700; margin-bottom: 0.125rem; }
-    .stat-label { font-size: 0.75rem; color: #94a3b8; }
-    .stat-sub { font-size: 0.625rem; color: #cbd5e1; margin-top: 0.125rem; }
+    .stat-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 0.75rem; padding: 1rem; text-align: center; }
+    .stat-card .st-icon { width: 2rem; height: 2rem; border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.5rem; font-size: 0.875rem; }
+    .stat-card .st-value { font-size: 1rem; font-weight: 700; margin-bottom: 0.125rem; }
+    .stat-card .st-label { font-size: 0.75rem; color: #94a3b8; }
+    .stat-card .st-note { font-size: 0.625rem; color: #e2e8f0; margin-top: 0.125rem; }
 
-    .overview-grid { display: grid; grid-template-columns: 1fr; gap: 1.25rem; }
-    @media (min-width: 1024px) { .overview-grid { grid-template-columns: 1fr 2fr; } }
-    .return-rate { font-size: 3rem; font-weight: 900; color: rgb(220,38,38); margin-bottom: 0.25rem; }
-    .net-value-label { font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.25rem; }
-    .net-value { font-size: 1.25rem; font-weight: 700; color: #0f172a; }
-    .chart-legend { display: flex; gap: 1rem; margin-bottom: 0.75rem; }
-    .legend-item { display: flex; align-items: center; gap: 0.375rem; font-size: 0.75rem; color: #94a3b8; }
-    .legend-line { width: 1rem; height: 2px; }
-    .chart-placeholder {
-      width: 100%; height: 180px; display: flex; align-items: center; justify-content: center;
-      color: #94a3b8; font-size: 0.75rem;
-    }
-    .win-rate-chart {
-      width: 100%; height: 120px; display: flex; align-items: center; justify-content: center;
-      color: #94a3b8; font-size: 0.875rem;
-    }
-    .heat-map-placeholder {
-      width: 100%; height: 13rem; display: flex; align-items: center; justify-content: center;
-      color: #94a3b8; font-size: 0.75rem;
-    }
-    .heat-legend { display: flex; align-items: center; gap: 0.75rem; font-size: 0.75rem; color: #94a3b8; }
-    .heat-legend .block { width: 0.75rem; height: 0.75rem; border-radius: 0.125rem; }
+    .monthly-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 0.75rem; padding: 1.25rem; margin-bottom: 1.25rem; }
+    .monthly-badge { font-size: 0.75rem; padding: 0.125rem 0.5rem; border-radius: 9999px; background: rgba(22,163,74,0.08); color: #16a34a; border: 1px solid rgba(22,163,74,0.15); }
+
+    .bottom-grid { display: grid; grid-template-columns: 1fr; gap: 1.25rem; margin-bottom: 1.25rem; }
+    @media (min-width: 1024px) { .bottom-grid { grid-template-columns: 1fr 1fr; } }
+
     .decision-table { width: 100%; border-collapse: collapse; }
-    .decision-table th {
-      text-align: left; padding: 0.75rem; font-size: 0.75rem; font-weight: 500;
-      color: #94a3b8; background: #fff; border-bottom: 1px solid #f1f5f9;
-      position: sticky; top: 0; z-index: 10;
-    }
+    .decision-table th { text-align: left; padding: 0.75rem; font-size: 0.75rem; font-weight: 500; color: #94a3b8; border-bottom: 1px solid #f1f5f9; background: #fff; position: sticky; top: 0; }
     .decision-table td { padding: 0.75rem; font-size: 0.8125rem; border-bottom: 1px solid #f8fafc; }
-    .tab-group { display: flex; gap: 0.25rem; padding: 0.25rem; background: #f1f5f9; border-radius: 9999px; }
-    .tab-item {
-      padding: 0.5rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500;
-      cursor: pointer; background: transparent; border: 1px solid transparent;
-      color: #94a3b8; transition: all 0.2s;
-    }
-    .tab-item.active { background: #fff; color: rgb(217,119,6); border-color: rgba(245,166,35,0.3); }
-    .month-nav { display: flex; align-items: center; gap: 0.5rem; }
-    .month-nav button {
-      width: 1.75rem; height: 1.75rem; border-radius: 0.5rem; display: flex;
-      align-items: center; justify-content: center; background: #f8fafc;
-      border: 1px solid #e2e8f0; color: #cbd5e1; cursor: not-allowed;
-    }
-    .month-nav .month-label { font-size: 0.875rem; font-weight: 600; color: #0f172a; min-width: 5.5rem; text-align: center; }
+
+    .heatmap-area { display: flex; align-items: center; justify-content: center; height: 13rem; color: #94a3b8; font-size: 0.875rem; }
+    .heatmap-legend { display: flex; align-items: center; gap: 0.75rem; font-size: 0.75rem; color: #94a3b8; }
+    .heatmap-legend .block { width: 0.75rem; height: 0.75rem; border-radius: 0.125rem; }
   </style>
 </head>
 <body>
@@ -106,39 +80,20 @@
       <div class="sidebar-section-title">主功能</div>
       <a class="sidebar-link" href="dashboard.html"><div class="icon"><i class="ri-dashboard-3-line"></i></div><span class="link-text">总览仪表盘</span></a>
       <a class="sidebar-link" href="news.html"><div class="icon"><i class="ri-radar-line"></i></div><span class="link-text">热点新闻</span></a>
-      <a class="sidebar-link" href="stocks.html"><div class="icon"><i class="ri-robot-2-line"></i></div><span class="link-text">AI交易模拟盘</span><span class="badge-dot"></span></a>
+      <a class="sidebar-link" href="stocks.html"><div class="icon"><i class="ri-robot-2-line"></i></div><span class="link-text">AI交易模拟盘</span></a>
       <a class="sidebar-link" href="simtrade.html"><div class="icon"><i class="ri-swap-line"></i></div><span class="link-text">模拟交易</span></a>
       <a class="sidebar-link" href="positions.html"><div class="icon"><i class="ri-briefcase-line"></i></div><span class="link-text">交易持仓</span></a>
       <div class="sidebar-section-title" style="margin-top:1.25rem;">工具</div>
       <a class="sidebar-link active" href="reports.html"><div class="icon"><i class="ri-bar-chart-2-line"></i></div><span class="link-text">交易报表</span><span class="badge-dot"></span></a>
       <a class="sidebar-link" href="settings.html"><div class="icon"><i class="ri-settings-4-line"></i></div><span class="link-text">账户设置</span></a>
     </nav>
-    <div class="sidebar-footer">
-      <div class="ai-status-card">
-        <div class="status-row"><span class="status-dot"></span><span class="status-label">AI 待命中</span></div>
-        <div class="status-info">今日 AI 决策 0 条<br>实际下单 0 笔</div>
-        <div class="status-pnl">浮盈 +¥33,213</div>
-      </div>
-    </div>
+    <div class="sidebar-footer"><div class="ai-status-card"><div class="status-row"><span class="status-dot"></span><span class="status-label">AI 待命中</span></div><div class="status-info">今日 AI 决策 0 条<br>实际下单 0 笔</div><div class="status-pnl">浮盈 +¥33,213</div></div></div>
   </aside>
-
   <main class="app-main">
     <div class="content">
-      <div class="risk-banner">
-        <button class="risk-header" onclick="toggleRiskBanner(this)">
-          <div class="left"><i class="ri-shield-flash-line"></i><span class="title">风险提示</span><span class="tag">模拟交易</span></div>
-          <i class="ri-arrow-up-s-line arrow"></i>
-        </button>
-        <div class="risk-body">
-          <div class="risk-item"><span class="dot">·</span><p>本功能为模拟交易，使用虚拟资金，不涉及真实资金交易，仅供学习参考</p></div>
-          <div class="risk-item"><span class="dot">·</span><p>行情数据可能存在延迟，成交价格和时机仅供参考，不代表真实市场执行情况</p></div>
-          <div class="risk-item"><span class="dot">·</span><p>模拟盈利不代表实盘交易能力，历史绩效不构成未来收益保证</p></div>
-          <div class="risk-item"><span class="dot">·</span><p>投资有风险，入市需谨慎，请勿将模拟结果作为真实投资决策依据</p></div>
-        </div>
-      </div>
+      <div class="risk-banner"><button class="risk-header" onclick="toggleRiskBanner(this)"><div class="left"><i class="ri-shield-flash-line"></i><span class="title">风险提示</span><span class="tag">模拟交易</span></div><i class="ri-arrow-up-s-line arrow"></i></button><div class="risk-body"><div class="risk-item"><span class="dot">·</span><p>本功能为模拟交易，使用虚拟资金，不涉及真实资金交易，仅供学习参考</p></div><div class="risk-item"><span class="dot">·</span><p>行情数据可能存在延迟，成交价格和时机仅供参考，不代表真实市场执行情况</p></div><div class="risk-item"><span class="dot">·</span><p>模拟盈利不代表实盘交易能力，历史绩效不构成未来收益保证</p></div><div class="risk-item"><span class="dot">·</span><p>投资有风险，入市需谨慎，请勿将模拟结果作为真实投资决策依据</p></div></div></div>
 
-      <!-- 时间区间 + 导出 -->
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:0.75rem;">
+      <div class="report-toolbar">
         <div></div>
         <div style="display:flex;align-items:center;gap:0.75rem;">
           <div class="period-tabs">
@@ -151,126 +106,103 @@
         </div>
       </div>
 
-      <!-- 核心指标概览 -->
-      <div class="overview-grid" style="margin-bottom:1.25rem;">
-        <div class="card">
-          <p style="font-size:0.75rem;color:#94a3b8;margin-bottom:0.5rem;">累计收益率</p>
-          <div class="return-rate">+8.06%</div>
-          <div style="font-size:0.75rem;color:#94a3b8;margin-bottom:1rem;">最大回撤：0.00%</div>
-          <div style="border-top:1px solid #f1f5f9;padding-top:0.75rem;">
-            <p style="font-size:0.75rem;color:#94a3b8;margin-bottom:0.25rem;">资产净值</p>
-            <p style="font-size:1.25rem;font-weight:700;color:#0f172a;">¥1,080,554.97</p>
-          </div>
+      <!-- 累计收益 + 资产曲线 -->
+      <div class="summary-grid">
+        <div class="summary-card">
+          <div class="sc-label">累计收益率</div>
+          <div class="sc-value">+8.06%</div>
+          <div class="sc-sub">最大回撤：0.00%</div>
+          <div class="sc-footer"><div class="fl">资产净值</div><div class="fv">¥1,080,554.97</div></div>
         </div>
-        <div class="card">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
-            <p style="font-size:0.75rem;font-weight:600;color:#334155;">资产净值曲线</p>
-            <div class="chart-legend">
-              <div class="legend-item"><div class="legend-line" style="background:rgb(245,166,35);"></div>我的资产</div>
-              <div class="legend-item"><div class="legend-line" style="background:rgb(99,102,241);border-top:2px dashed rgb(99,102,241);height:0;"></div>qlib 量化基线 <i class="ri-information-line" style="font-size:0.625rem;color:#cbd5e1;"></i></div>
+        <div class="summary-card">
+          <div class="chart-header">
+            <div>
+              <div class="ch-title">资产净值曲线</div>
+              <div class="chart-legend">
+                <span><div class="line" style="background:#f5a623;"></div>我的资产</span>
+                <span><div class="dashed" style="border-color:#6366f1;"></div>qlib 量化基线 <i class="ri-information-line" style="font-size:0.625rem;color:#e2e8f0;"></i></span>
+              </div>
             </div>
           </div>
-          <div style="height:180px;"><canvas id="netValueChart"></canvas></div>
+          <div style="height:180px;display:flex;align-items:center;justify-content:center;">
+            <svg viewBox="0 0 480 160" style="width:100%;height:100%;">
+              <defs>
+                <linearGradient id="assetGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#F5A623" stop-opacity="0.2"/><stop offset="100%" stop-color="#F5A623" stop-opacity="0"/></linearGradient>
+                <linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#e8941a"/><stop offset="100%" stop-color="#F5A623"/></linearGradient>
+              </defs>
+              <g><line x1="50" y1="132" x2="464" y2="132" stroke="#f1f5f9" stroke-width="1"/><text x="44" y="136" text-anchor="end" font-size="9" fill="#94a3b8">96万</text></g>
+              <g><line x1="50" y1="102" x2="464" y2="102" stroke="#f1f5f9" stroke-width="1"/><text x="44" y="106" text-anchor="end" font-size="9" fill="#94a3b8">99万</text></g>
+              <g><line x1="50" y1="72" x2="464" y2="72" stroke="#f1f5f9" stroke-width="1"/><text x="44" y="76" text-anchor="end" font-size="9" fill="#94a3b8">102万</text></g>
+              <g><line x1="50" y1="42" x2="464" y2="42" stroke="#f1f5f9" stroke-width="1"/><text x="44" y="46" text-anchor="end" font-size="9" fill="#94a3b8">105万</text></g>
+              <g><line x1="50" y1="12" x2="464" y2="12" stroke="#f1f5f9" stroke-width="1"/><text x="44" y="16" text-anchor="end" font-size="9" fill="#94a3b8">108万</text></g>
+              <text x="50" y="156" text-anchor="middle" font-size="9" fill="#94a3b8">2026-05-21</text>
+              <text x="264" y="156" text-anchor="middle" font-size="9" fill="#94a3b8">2026-06-05</text>
+              <text x="464" y="156" text-anchor="middle" font-size="9" fill="#94a3b8">2026-06-19</text>
+              <path d="M50,94.6 L64.3,94.6 L78.6,94.6 L92.8,94.6 L107.1,94.6 L121.4,94.6 L135.7,94.6 L149.9,94.6 L164.2,94.6 L178.5,94.6 L192.8,94.6 L207,94.6 L221.3,94.6 L235.6,94.6 L249.9,94.6 L264.1,94.6 L278.4,94.6 L292.7,94.6 L307,94.6 L321.2,94.6 L335.5,100.1 L349.8,114.3 L364.1,130.1 L378.3,130.1 L392.6,130.1 L406.9,88.6 L421.2,70 L435.4,42.6 L449.7,14.1 L464,14.1 L464,132 L50,132 Z" fill="url(#assetGrad)"/>
+              <path d="M50,94.6 L64.3,94.6 L78.6,94.6 L92.8,94.6 L107.1,94.6 L121.4,94.6 L135.7,94.6 L149.9,94.6 L164.2,94.6 L178.5,94.6 L192.8,94.6 L207,94.6 L221.3,94.6 L235.6,94.6 L249.9,94.6 L264.1,94.6 L278.4,94.6 L292.7,94.6 L307,94.6 L321.2,94.6 L335.5,100.1 L349.8,114.3 L364.1,130.1 L378.3,130.1 L392.6,130.1 L406.9,88.6 L421.2,70 L435.4,42.6 L449.7,14.1 L464,14.1" fill="none" stroke="url(#lineGrad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="464" cy="14.1" r="4" fill="#F5A623" stroke="#fff" stroke-width="2"/>
+              <path d="M50,94.6 L120,90 L200,85 L280,80 L360,75 L420,70 L464,65" fill="none" stroke="#6366f1" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.5"/>
+            </svg>
+          </div>
         </div>
       </div>
 
       <!-- 每日收益 -->
-      <div class="card" style="margin-bottom:1.25rem;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.75rem;">
+      <div class="chart-card">
+        <div class="chart-header">
           <div style="display:flex;align-items:center;gap:0.75rem;">
-            <h4 style="font-size:0.875rem;font-weight:600;color:#0f172a;">每日收益</h4>
-            <div class="tab-group">
-              <button class="tab-item active">收益额</button>
-              <button class="tab-item">收益率</button>
-            </div>
+            <h4 class="ch-title">每日收益</h4>
+            <div class="period-tabs"><button class="period-tab active">收益额</button><button class="period-tab">收益率</button></div>
           </div>
-          <div class="month-nav">
-            <button disabled><i class="ri-arrow-left-s-line"></i></button>
-            <span class="month-label">2026年6月</span>
-            <button disabled><i class="ri-arrow-right-s-line"></i></button>
+          <div style="display:flex;align-items:center;gap:0.5rem;">
+            <button style="width:1.75rem;height:1.75rem;border-radius:0.5rem;display:flex;align-items:center;justify-content:center;background:#f8fafc;border:1px solid #e2e8f0;color:#cbd5e1;cursor:not-allowed;"><i class="ri-arrow-left-s-line"></i></button>
+            <span style="font-size:0.875rem;font-weight:600;min-width:5.5rem;text-align:center;color:#0f172a;">2026年6月</span>
+            <button style="width:1.75rem;height:1.75rem;border-radius:0.5rem;display:flex;align-items:center;justify-content:center;background:#f8fafc;border:1px solid #e2e8f0;color:#cbd5e1;cursor:not-allowed;"><i class="ri-arrow-right-s-line"></i></button>
           </div>
         </div>
-        <div style="height:160px;display:flex;align-items:center;justify-content:center;">
-          <span style="font-size:0.75rem;color:#94a3b8;">暂无收益数据</span>
-        </div>
+        <div style="height:10rem;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:0.875rem;">暂无收益数据</div>
       </div>
 
-      <p style="font-size:0.6875rem;color:#94a3b8;margin-bottom:1rem;"><i class="ri-information-line" style="margin-right:0.25rem;"></i>以下指标为账户全期统计，不随上方时间区间切换；时间区间仅作用于资产曲线。</p>
+      <p style="font-size:0.6875rem;color:#94a3b8;margin-bottom:1.25rem;"><i class="ri-information-line" style="margin-right:0.25rem;"></i>以下指标为账户全期统计，不随上方时间区间切换；时间区间仅作用于资产曲线。</p>
 
-      <!-- 统计指标 -->
-      <div class="stats-grid" style="margin-bottom:1.25rem;">
-        <div class="stat-card">
-          <div class="stat-icon" style="background:rgba(217,119,6,0.07);"><i class="ri-swap-line" style="color:rgb(217,119,6);"></i></div>
-          <div class="stat-value" style="color:rgb(217,119,6);">0笔</div>
-          <div class="stat-label">总交易笔数</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon" style="background:rgba(148,163,184,0.07);"><i class="ri-trophy-line" style="color:#94a3b8;"></i></div>
-          <div class="stat-value" style="color:#94a3b8;">暂无平仓</div>
-          <div class="stat-label">交易胜率</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon" style="background:rgba(220,38,38,0.07);"><i class="ri-funds-line" style="color:rgb(220,38,38);"></i></div>
-          <div class="stat-value" style="color:rgb(220,38,38);">-</div>
-          <div class="stat-label">累计盈亏</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon" style="background:rgba(220,38,38,0.07);"><i class="ri-arrow-down-circle-line" style="color:rgb(220,38,38);"></i></div>
-          <div class="stat-value" style="color:rgb(220,38,38);">0.00%</div>
-          <div class="stat-label">最大回撤</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon" style="background:rgba(22,163,74,0.07);"><i class="ri-robot-line" style="color:rgb(22,163,74);"></i></div>
-          <div class="stat-value" style="color:rgb(22,163,74);">-</div>
-          <div class="stat-label">平均置信度</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon" style="background:rgba(148,163,184,0.07);"><i class="ri-scales-3-line" style="color:#94a3b8;"></i></div>
-          <div class="stat-value" style="color:#94a3b8;">样本不足</div>
-          <div class="stat-label">夏普比率</div>
-          <div class="stat-sub">仅 0 个有效交易日</div>
-        </div>
+      <!-- 6个统计卡片 -->
+      <div class="stats-grid">
+        <div class="stat-card"><div class="st-icon" style="background:rgba(217,119,6,0.07);"><i class="ri-swap-line" style="color:#d97706;"></i></div><div class="st-value" style="color:#d97706;">0笔</div><div class="st-label">总交易笔数</div></div>
+        <div class="stat-card"><div class="st-icon" style="background:rgba(148,163,184,0.07);"><i class="ri-trophy-line" style="color:#94a3b8;"></i></div><div class="st-value" style="color:#94a3b8;">暂无平仓</div><div class="st-label">交易胜率</div></div>
+        <div class="stat-card"><div class="st-icon" style="background:rgba(220,38,38,0.07);"><i class="ri-funds-line" style="color:#dc2626;"></i></div><div class="st-value" style="color:#dc2626;">-</div><div class="st-label">累计盈亏</div></div>
+        <div class="stat-card"><div class="st-icon" style="background:rgba(220,38,38,0.07);"><i class="ri-arrow-down-circle-line" style="color:#dc2626;"></i></div><div class="st-value" style="color:#dc2626;">0.00%</div><div class="st-label">最大回撤</div></div>
+        <div class="stat-card"><div class="st-icon" style="background:rgba(22,163,74,0.07);"><i class="ri-robot-line" style="color:#16a34a;"></i></div><div class="st-value" style="color:#16a34a;">-</div><div class="st-label">平均置信度</div></div>
+        <div class="stat-card"><div class="st-icon" style="background:rgba(148,163,184,0.07);"><i class="ri-scales-3-line" style="color:#94a3b8;"></i></div><div class="st-value" style="color:#94a3b8;">样本不足</div><div class="st-label">夏普比率</div><div class="st-note">仅 0 个有效交易日</div></div>
       </div>
 
       <!-- 月度胜率 -->
-      <div class="card" style="margin-bottom:1.25rem;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
-          <h4 style="font-size:0.875rem;font-weight:600;color:#0f172a;">月度 AI 决策胜率趋势</h4>
-          <div style="display:flex;align-items:center;gap:0.5rem;">
-            <span style="font-size:0.75rem;padding:0.125rem 0.5rem;border-radius:9999px;background:rgba(22,163,74,0.08);color:rgb(22,163,74);border:1px solid rgba(22,163,74,0.15);">近6个月持续优化中</span>
-            <span style="font-size:0.75rem;color:#94a3b8;">AI自我学习迭代</span>
-          </div>
+      <div class="monthly-card">
+        <div class="chart-header">
+          <h4 class="ch-title">月度 AI 决策胜率趋势</h4>
+          <div style="display:flex;align-items:center;gap:0.5rem;"><span class="monthly-badge">近6个月持续优化中</span><span style="font-size:0.75rem;color:#94a3b8;">AI自我学习迭代</span></div>
         </div>
-        <div class="win-rate-chart">
-          <div style="text-align:center;">
-            <i class="ri-line-chart-line" style="font-size:1.5rem;opacity:0.5;display:block;margin-bottom:0.5rem;"></i>
-            <div style="font-size:0.875rem;">暂无月度胜率数据</div>
-            <div style="font-size:0.75rem;margin-top:0.25rem;">完成至少一个月的执行交易后会自动生成</div>
-          </div>
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2.5rem 0;color:#94a3b8;">
+          <i class="ri-line-chart-line" style="font-size:1.875rem;margin-bottom:0.5rem;opacity:0.5;"></i>
+          <div style="font-size:0.875rem;">暂无月度胜率数据</div>
+          <div style="font-size:0.75rem;margin-top:0.25rem;">完成至少一个月的执行交易后会自动生成</div>
         </div>
       </div>
 
-      <!-- 板块 + 个股 -->
-      <div style="display:grid;grid-template-columns:1fr;gap:1.25rem;margin-bottom:1.25rem;">
-        <div class="card">
-          <h4 style="font-size:0.875rem;font-weight:600;color:#0f172a;margin-bottom:1rem;">板块分布</h4>
-          <div style="height:6rem;display:flex;align-items:center;justify-content:center;font-size:0.75rem;color:#94a3b8;">暂无数据</div>
+      <!-- 板块分布 + 个股盈亏 -->
+      <div class="bottom-grid">
+        <div class="chart-card">
+          <h4 class="ch-title" style="margin-bottom:1rem;">板块分布</h4>
+          <div style="height:6rem;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:0.875rem;">暂无数据</div>
         </div>
-        <div class="card">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
-            <h4 style="font-size:0.875rem;font-weight:600;color:#0f172a;">个股盈亏</h4>
-            <span style="font-size:0.625rem;color:#94a3b8;">点击查看复盘</span>
-          </div>
-          <div style="height:6rem;display:flex;align-items:center;justify-content:center;font-size:0.75rem;color:#94a3b8;">暂无数据</div>
+        <div class="chart-card">
+          <div class="chart-header"><h4 class="ch-title">个股盈亏</h4><span style="font-size:0.625rem;color:#94a3b8;">点击查看复盘</span></div>
+          <div style="height:6rem;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:0.875rem;">暂无数据</div>
         </div>
       </div>
 
-      <!-- AI 决策回顾 -->
-      <div class="card" style="margin-bottom:1.25rem;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
-          <h4 style="font-size:0.875rem;font-weight:600;color:#0f172a;">AI 决策回顾</h4>
-          <span style="font-size:0.75rem;color:#94a3b8;">共 0 条 · 按时间倒序</span>
-        </div>
+      <!-- AI决策回顾 -->
+      <div class="chart-card">
+        <div class="chart-header"><h4 class="ch-title">AI 决策回顾</h4><span style="font-size:0.75rem;color:#94a3b8;">共 0 条 · 按时间倒序</span></div>
         <div style="overflow:auto;max-height:32rem;">
           <table class="decision-table">
             <thead><tr><th>时间</th><th>操作</th><th>方向</th><th>理由</th><th>结果</th><th></th></tr></thead>
@@ -280,94 +212,52 @@
       </div>
 
       <!-- 持仓热力图 -->
-      <div class="card">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem;">
-          <h4 style="font-size:0.875rem;font-weight:600;color:#0f172a;">持仓热力图</h4>
-          <div class="heat-legend">
+      <div class="chart-card">
+        <div class="chart-header">
+          <h4 class="ch-title">持仓热力图</h4>
+          <div class="heatmap-legend">
             <span>面积 = 持仓市值</span>
-            <span style="display:flex;align-items:center;gap:0.375rem;"><span class="block" style="background:rgb(220,38,38);"></span>深红=高盈利</span>
+            <span style="display:flex;align-items:center;gap:0.375rem;"><span class="block" style="background:#dc2626;"></span>深红=高盈利</span>
             <span style="display:flex;align-items:center;gap:0.375rem;"><span class="block" style="background:#e2e8f0;"></span>持平</span>
-            <span style="display:flex;align-items:center;gap:0.375rem;"><span class="block" style="background:rgb(22,163,74);"></span>亏损</span>
+            <span style="display:flex;align-items:center;gap:0.375rem;"><span class="block" style="background:#16a34a;"></span>亏损</span>
           </div>
         </div>
-        <div class="heat-map-placeholder">暂无持仓数据</div>
+        <div class="heatmap-area">暂无持仓数据</div>
       </div>
     </div>
   </main>
 
-  <!-- AI 对话按钮 -->
   <button class="ai-chat-btn"><span class="ping"></span><img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIxNiIgY3k9IjE2IiByPSIxNiIgZmlsbD0idXJsKCNnKSIvPjx0ZXh0IHg9IjgiIHk9IjIyIiBmb250LXNpemU9IjE2IiBmaWxsPSJ3aGl0ZSI+QUk8L3RleHQ+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJnIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwJSIgc3R5bGU9InN0b3AtY29sb3I6cmdiKDI0NSwxNjYsMzUpIi8+PHN0b3Agb2Zmc2V0PSIxMDAlIiBzdHlsZT0ic3RvcC1jb2xvcjpyZ2IoMjMyLDE0OCwyNikiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48L3N2Zz4=" alt="AI"><span class="btn-text">AI 交易员，点击对话</span><span class="online-dot"></span></button>
+  <div class="ai-chat-dialog"><div class="ai-chat-header"><div class="left"><div class="icon"><i class="ri-robot-2-line"></i></div><div class="info"><div class="name">AI 交易员</div><div class="status"><span class="dot"></span>在线</div></div></div><div class="actions"><button class="ai-chat-pause"><i class="ri-pause-line"></i></button><button class="ai-chat-close"><i class="ri-close-line"></i></button></div></div><div class="ai-chat-quick"><button class="quick-question">今日买了什么</button><button class="quick-question">当前仓位怎样</button><button class="quick-question">最新决策原因</button><button class="quick-question">明日策略</button></div><div class="ai-chat-messages"><div class="ai-msg bot"><div class="ai-msg-avatar"><i class="ri-robot-2-line"></i></div><div class="ai-msg-bubble">你好！我是 AI 交易员，有什么可以帮你的？</div></div></div><div class="ai-chat-input"><div class="input-row"><textarea placeholder="输入消息..." rows="1"></textarea><button class="ai-send-btn"><i class="ri-send-plane-fill"></i></button></div></div></div>
+  <div class="customer-service"><div class="cs-header"><div class="info"><div class="cs-icon"><i class="ri-customer-service-2-line"></i></div><div><div class="cs-name">在线客服</div><div class="cs-status"><span class="dot"></span><span>在线</span></div></div></div><button class="minimize-btn cs-minimize"><i class="ri-subtract-line"></i></button></div><div class="cs-messages"><div class="cs-msg user"><div><div class="bubble">收费标准是什么？</div><div class="time">21:11</div></div></div><div class="cs-msg bot"><div class="bot-avatar"><i class="ri-customer-service-2-line"></i></div><div><div class="bubble">1:年付9886元<br>2:半年6886元<br>3:季度4886元<br>4:月付2886元</div><div class="time">09:03</div></div></div></div><div class="cs-input-area"><div class="cs-input-row"><textarea placeholder="输入消息..." rows="1"></textarea><button class="send-btn" disabled><i class="ri-send-plane-fill"></i></button></div><p class="cs-hint">Enter 发送</p></div></div>
 
-  <!-- AI 对话框 -->
-  <div class="ai-chat-dialog">
-    <div class="ai-chat-header">
-      <div class="left">
-        <div class="icon"><i class="ri-robot-2-line"></i></div>
-        <div class="info">
-          <div class="name">AI 交易员</div>
-          <div class="status"><span class="dot"></span>在线</div>
-        </div>
-      </div>
-      <div class="actions">
-        <button class="ai-chat-pause"><i class="ri-pause-line"></i></button>
-        <button class="ai-chat-close"><i class="ri-close-line"></i></button>
-      </div>
-    </div>
-    <div class="ai-chat-quick">
-      <button class="quick-question">今日买了什么</button>
-      <button class="quick-question">当前仓位怎样</button>
-      <button class="quick-question">最新决策原因</button>
-      <button class="quick-question">明日策略</button>
-    </div>
-    <div class="ai-chat-messages">
-      <div class="ai-msg bot">
-        <div class="ai-msg-avatar"><i class="ri-robot-2-line"></i></div>
-        <div class="ai-msg-bubble">你好！我是 AI 交易员，有什么可以帮你的？</div>
-      </div>
-    </div>
-    <div class="ai-chat-input">
-      <div class="input-row">
-        <textarea placeholder="输入消息..." rows="1"></textarea>
-        <button class="ai-send-btn"><i class="ri-send-plane-fill"></i></button>
-      </div>
-    </div>
-  </div>
-  <div class="customer-service">
-    <div class="cs-header"><div class="info"><div class="cs-icon"><i class="ri-customer-service-2-line"></i></div><div><div class="cs-name">在线客服</div><div class="cs-status"><span class="dot"></span><span>在线</span></div></div></div><button class="minimize-btn cs-minimize"><i class="ri-subtract-line"></i></button></div>
-    <div class="cs-messages"><div class="cs-msg user"><div><div class="bubble">收费标准是什么？</div><div class="time">21:11</div></div></div><div class="cs-msg bot"><div class="bot-avatar"><i class="ri-customer-service-2-line"></i></div><div><div class="bubble">1:年付9886元<br>2:半年6886元<br>3:季度4886元<br>4:月付2886元</div><div class="time">09:03</div></div></div></div>
-    <div class="cs-input-area"><div class="cs-input-row"><textarea placeholder="输入消息..." rows="1"></textarea><button class="send-btn" disabled><i class="ri-send-plane-fill"></i></button></div><p class="cs-hint">Enter 发送</p></div>
-  </div>
+  <script src="api-config.js"></script>
+  <script src="data-store.js"></script>
   <script src="shared.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script>
-    const nvCtx = document.getElementById('netValueChart');
-    if (nvCtx) {
-      new Chart(nvCtx, {
-        type: 'line',
-        data: {
-          labels: ['6/9','6/10','6/11','6/12','6/13','6/16','6/17','6/18','6/19'],
-          datasets: [{
-            label: '我的资产', data: [1000000,1005200,1012800,1008400,1023600,1038900,1052100,1068400,1080555],
-            borderColor: 'rgb(245,166,35)', backgroundColor: 'rgba(245,166,35,0.06)',
-            fill: true, tension: 0.4, pointRadius: 2, borderWidth: 2
-          }, {
-            label: 'qlib 量化基线', data: [1000000,1003000,1007000,1011000,1015000,1019000,1023000,1027000,1031000],
-            borderColor: 'rgb(99,102,241)', borderDash: [5,5],
-            fill: false, tension: 0.4, pointRadius: 0, borderWidth: 1.5
-          }]
-        },
-        options: {
-          responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
-          scales: {
-            x: { grid: { display: false }, ticks: { font: { size: 11 }, color: '#94a3b8' } },
-            y: { grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { size: 11 }, color: '#94a3b8', callback: v => '¥'+(v/10000).toFixed(1)+'万' } }
-          }
-        }
-      });
-    }
-    setInterval(()=>{const e=document.getElementById('headerTime');if(e)e.textContent=new Date().toLocaleTimeString('zh-CN',{hour12:false})},1000);
+    // 报表数据联动
+    (function() {
+      const report = DataStore.getReportData();
+
+      // 更新累计收益率
+      const bigPct = document.querySelector('.sc-value');
+      if (bigPct) { bigPct.textContent = fmtPct(report.totalPnlPct || 0); bigPct.style.color = (report.totalPnlPct || 0) >= 0 ? '#dc2626' : '#16a34a'; }
+
+      // 更新资产净值
+      const netVal = document.querySelector('.sc-footer .fv');
+      if (netVal) netVal.textContent = fmtMoney(report.totalAsset);
+
+      // 更新统计卡片
+      const statCards = document.querySelectorAll('.stat-card');
+      if (statCards[0]) statCards[0].querySelector('.st-value').textContent = report.totalTrades + '笔';
+      if (statCards[1]) statCards[1].querySelector('.st-value').textContent = report.sellTrades > 0 ? report.winRate + '%' : '暂无平仓';
+      if (statCards[2]) statCards[2].querySelector('.st-value').textContent = report.totalPnl !== 0 ? fmtMoney(report.totalPnl) : '-';
+      if (statCards[2]) statCards[2].querySelector('.st-value').style.color = report.totalPnl >= 0 ? '#dc2626' : '#16a34a';
+
+      // 更新侧边栏
+      const statusPnl = document.querySelector('.ai-status-card .status-pnl');
+      if (statusPnl) statusPnl.textContent = `浮盈 ${report.totalPnl >= 0 ? '+' : ''}¥${fmt(report.totalPnl, 0)}`;
+    })();
   </script>
-  <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
 </body>
 </html>
