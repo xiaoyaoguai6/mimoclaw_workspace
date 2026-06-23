@@ -1,6 +1,7 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useAppStore } from '@/stores/app'
+import api from '@/api'
 import RiskBanner from '@/components/RiskBanner.vue'
 
 const store = useAppStore()
@@ -20,19 +21,57 @@ const aiDynamics = [
   { time: '14:26', type: 'watch', label: '⚠️ 列入观察', text: '中天科技(600522) 观察，基本面受益G7资源协议且估值最健康。' },
 ]
 
-const kpiCards = [
-  { label: '模拟总资产', value: '¥1,081,219.97', sub: '初始资金 ¥1,000,000', change: '今日变化 +¥0 (+0.00%)', changeType: 'up', icon: 'ri-funds-line', iconBg: 'rgba(245,166,35,0.094)', iconColor: '#f5a623' },
-  { label: '累计盈亏', value: '+¥81,220', valueColor: '#dc2626', sub: '+8.12% 总收益', change: '今日 +¥0（落袋 + 浮动）', changeType: 'up', icon: 'ri-percent-line', iconBg: 'rgba(220,38,38,0.094)', iconColor: '#dc2626' },
-  { label: '落袋盈亏', value: '+¥50,804', valueColor: '#dc2626', sub: '累计止盈 +¥72,321 · 累计止损 -¥24,816 · 手续费 -¥2,797', change: '今日卖出兑现 +¥0', changeType: 'up', icon: 'ri-safe-line', iconBg: 'rgba(220,38,38,0.094)', iconColor: '#dc2626' },
-  { label: '浮动盈亏', value: '+¥33,213', valueColor: '#dc2626', sub: '4 只持仓 mark-to-market', change: '今日涨跌 +¥0', changeType: 'up', icon: 'ri-line-chart-line', iconBg: 'rgba(220,38,38,0.094)', iconColor: '#dc2626' },
-  { label: '持仓股票数', value: '4 只', sub: '仓位使用率 52%', change: '今日无持仓变动', changeType: 'neutral', icon: 'ri-briefcase-3-line', iconBg: 'rgba(245,166,35,0.094)', iconColor: '#f5a623' },
-]
-
 const dynamicColorMap = {
   skip: { bg: 'rgba(59,130,246,0.06)', border: 'rgba(59,130,246,0.15)', tagBg: 'rgba(59,130,246,0.08)', tagColor: '#3b82f6', tagBorder: 'rgba(59,130,246,0.15)' },
   watch: { bg: 'rgba(245,166,35,0.07)', border: 'rgba(245,166,35,0.2)', tagBg: 'rgba(245,166,35,0.08)', tagColor: '#d97706', tagBorder: 'rgba(245,166,35,0.2)' },
   execute: { bg: 'rgba(34,197,94,0.06)', border: 'rgba(34,197,94,0.15)', tagBg: 'rgba(34,197,94,0.08)', tagColor: '#16a34a', tagBorder: 'rgba(34,197,94,0.15)' },
 }
+
+const fmt = (v) => v.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+const fmtPnl = (v) => (v >= 0 ? '+' : '') + fmt(Math.abs(v))
+
+const kpiCards = computed(() => {
+  const a = store.account
+  const todayUp = a.today_pnl >= 0
+  return [
+    {
+      label: '模拟总资产', value: `¥${fmt(a.total_assets)}`, sub: `初始资金 ¥${fmt(a.initial_capital)}`,
+      change: `今日变化 ${fmtPnl(a.today_pnl)} (${fmtPnl(a.today_pnl / a.total_assets * 100)}%)`,
+      changeType: todayUp ? 'up' : 'down',
+      icon: 'ri-funds-line', iconBg: 'rgba(245,166,35,0.094)', iconColor: '#f5a623',
+    },
+    {
+      label: '累计盈亏', value: `${fmtPnl(a.total_pnl)}`, valueColor: a.total_pnl >= 0 ? '#dc2626' : '#16a34a',
+      sub: `${fmtPnl(a.total_pnl_pct)}% 总收益`,
+      change: `今日 ${fmtPnl(a.today_pnl)}（落袋 + 浮动）`, changeType: a.total_pnl >= 0 ? 'up' : 'down',
+      icon: 'ri-percent-line', iconBg: a.total_pnl >= 0 ? 'rgba(220,38,38,0.094)' : 'rgba(22,163,74,0.094)', iconColor: a.total_pnl >= 0 ? '#dc2626' : '#16a34a',
+    },
+    {
+      label: '落袋盈亏', value: `${fmtPnl(a.realized_pnl)}`, valueColor: a.realized_pnl >= 0 ? '#dc2626' : '#16a34a',
+      sub: '已平仓兑现盈亏', change: '基于真实成交计算', changeType: 'neutral',
+      icon: 'ri-safe-line', iconBg: 'rgba(245,166,35,0.094)', iconColor: '#f5a623',
+    },
+    {
+      label: '浮动盈亏', value: `${fmtPnl(a.unrealized_pnl)}`, valueColor: a.unrealized_pnl >= 0 ? '#dc2626' : '#16a34a',
+      sub: `${a.position_count} 只持仓 mark-to-market`,
+      change: `今日涨跌 ${fmtPnl(a.today_pnl)}`, changeType: a.unrealized_pnl >= 0 ? 'up' : 'down',
+      icon: 'ri-line-chart-line', iconBg: a.unrealized_pnl >= 0 ? 'rgba(220,38,38,0.094)' : 'rgba(22,163,74,0.094)', iconColor: a.unrealized_pnl >= 0 ? '#dc2626' : '#16a34a',
+    },
+    {
+      label: '持仓股票数', value: `${a.position_count} 只`, sub: `仓位使用率 ${a.position_usage}%`,
+      change: '实时同步', changeType: 'neutral',
+      icon: 'ri-briefcase-3-line', iconBg: 'rgba(245,166,35,0.094)', iconColor: '#f5a623',
+    },
+  ]
+})
+
+const holdingsWithWeight = computed(() => {
+  const totalMv = store.account.total_market_value || 1
+  return store.holdings.map(h => ({
+    ...h,
+    weight: (h.market_value / totalMv * 100).toFixed(1),
+  }))
+})
 </script>
 
 <template>
@@ -107,8 +146,10 @@ const dynamicColorMap = {
           <div>
             <h3 class="text-sm font-semibold" style="color: #0f172a">资产曲线</h3>
             <div class="flex items-center gap-1.5 mt-0.5">
-              <span class="text-xs font-semibold" style="color: #dc2626">+8.12%</span>
-              <span class="text-xs" style="color: #94a3b8">近30日收益</span>
+              <span class="text-xs font-semibold" :style="{ color: store.account.total_pnl_pct >= 0 ? '#dc2626' : '#16a34a' }">
+                {{ store.account.total_pnl_pct >= 0 ? '+' : '' }}{{ store.account.total_pnl_pct }}%
+              </span>
+              <span class="text-xs" style="color: #94a3b8">总收益</span>
             </div>
             <div class="flex items-center gap-3 mt-1">
               <span class="text-xs" style="color: #94a3b8">夏普 <strong style="color: #d97706">7.72</strong></span>
@@ -133,7 +174,7 @@ const dynamicColorMap = {
             <h3 class="text-sm font-semibold" style="color: #0f172a">AI 今日决策摘要</h3>
             <span class="text-[10px] px-1.5 py-0.5 rounded" style="background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0">建议口播</span>
           </div>
-          <span class="text-xs px-2 py-1 rounded-full" style="background: rgba(245,166,35,0.1); color: #d97706; border: 1px solid rgba(245,166,35,0.2)">2026年06月19日</span>
+          <span class="text-xs px-2 py-1 rounded-full" style="background: rgba(245,166,35,0.1); color: #d97706; border: 1px solid rgba(245,166,35,0.2)">{{ store.marketStatus.dateLabel }}</span>
         </div>
         <div class="flex items-start gap-4 mb-4 flex-1">
           <div class="w-12 h-12 rounded-full shrink-0 flex items-center justify-center" style="border: 2px solid rgba(245,166,35,0.3); background: rgba(245,166,35,0.1)">
@@ -149,19 +190,11 @@ const dynamicColorMap = {
         </div>
         <div class="flex items-center gap-4 mb-4 py-3 rounded-xl px-4" style="background: #f8fafc; border: 1px solid #f1f5f9">
           <div class="flex-1 text-center">
-            <div class="text-xs font-bold" style="color: #d97706">20只</div>
-            <div class="text-xs mt-0.5" style="color: #94a3b8">今日扫描</div>
+            <div class="text-xs font-bold" style="color: #d97706">{{ store.account.position_count }}只</div>
+            <div class="text-xs mt-0.5" style="color: #94a3b8">持仓</div>
           </div>
           <div class="flex-1 text-center">
-            <div class="text-xs font-bold" style="color: #d97706">—</div>
-            <div class="text-xs mt-0.5" style="color: #94a3b8">执行</div>
-          </div>
-          <div class="flex-1 text-center">
-            <div class="text-xs font-bold" style="color: #d97706">15只</div>
-            <div class="text-xs mt-0.5" style="color: #94a3b8">候选</div>
-          </div>
-          <div class="flex-1 text-center">
-            <div class="text-xs font-bold" style="color: #d97706">100%</div>
+            <div class="text-xs font-bold" style="color: #d97706">{{ store.account.position_usage }}%</div>
             <div class="text-xs mt-0.5" style="color: #94a3b8">仓位</div>
           </div>
         </div>
@@ -222,11 +255,16 @@ const dynamicColorMap = {
           <h3 class="text-sm font-semibold" style="color: #0f172a">持仓快照</h3>
           <router-link to="/positions" class="text-xs font-medium" style="color: #d97706">查看全部 <i class="ri-arrow-right-line"></i></router-link>
         </div>
-        <el-table :data="store.holdings" size="small" class="flex-1">
+        <el-table v-if="holdingsWithWeight.length" :data="holdingsWithWeight" size="small" class="flex-1">
           <el-table-column label="股票" min-width="100">
             <template #default="{ row }">
               <div class="font-semibold text-xs" style="color: #0f172a">{{ row.name }}</div>
               <div class="text-[10px]" style="color: #94a3b8">{{ row.code }}</div>
+            </template>
+          </el-table-column>
+          <el-table-column label="现价" align="right" min-width="70">
+            <template #default="{ row }">
+              <div class="text-xs font-semibold" style="color: #0f172a">¥{{ row.current_price }}</div>
             </template>
           </el-table-column>
           <el-table-column label="浮动盈亏" align="right" min-width="80">
@@ -235,7 +273,7 @@ const dynamicColorMap = {
                 {{ row.pnl >= 0 ? '+' : '' }}{{ (row.pnl / 10000).toFixed(2) }}万
               </div>
               <div class="text-[10px]" :style="{ color: row.pnl >= 0 ? '#dc2626' : '#16a34a' }">
-                {{ row.pnlPercent >= 0 ? '+' : '' }}{{ row.pnlPercent }}%
+                {{ row.pnl_pct >= 0 ? '+' : '' }}{{ row.pnl_pct }}%
               </div>
             </template>
           </el-table-column>
@@ -250,9 +288,14 @@ const dynamicColorMap = {
             </template>
           </el-table-column>
         </el-table>
+        <div v-else class="flex-1 flex items-center justify-center text-xs" style="color: #94a3b8">
+          暂无持仓，去模拟交易页建仓
+        </div>
         <div class="mt-3 pt-3 flex items-center justify-between" style="border-top: 1px solid #f1f5f9">
           <span class="text-xs" style="color: #94a3b8">总浮动盈亏</span>
-          <span class="text-sm font-bold" style="color: #dc2626">+¥33,213</span>
+          <span class="text-sm font-bold" :style="{ color: store.account.unrealized_pnl >= 0 ? '#dc2626' : '#16a34a' }">
+            {{ store.account.unrealized_pnl >= 0 ? '+' : '' }}¥{{ Math.abs(store.account.unrealized_pnl).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
+          </span>
         </div>
       </div>
     </div>
@@ -264,7 +307,7 @@ const dynamicColorMap = {
           <h4 class="text-sm font-semibold flex items-center gap-2" style="color: #0f172a">
             <i class="ri-calendar-event-line text-sm" style="color: #f5a623"></i>财报日历
           </h4>
-          <span class="text-xs" style="color: #94a3b8">持仓 4 只</span>
+          <span class="text-xs" style="color: #94a3b8">持仓 {{ store.account.position_count }} 只</span>
         </div>
         <div class="text-xs text-center py-6" style="color: #94a3b8">近期无重要日程（财报披露/业绩预告/限售解禁）</div>
       </div>
@@ -274,10 +317,10 @@ const dynamicColorMap = {
             <i class="ri-line-chart-line text-sm" style="color: #f5a623"></i>持仓股今日涨跌
           </h4>
           <div class="flex items-center gap-3 text-xs" style="color: #94a3b8">
-            <span>4 只</span><span style="color: #cbd5e1">·</span><span>截至 19:01</span>
+            <span>{{ store.account.position_count }} 只</span><span style="color: #cbd5e1">·</span><span>截至 {{ store.marketStatus.currentTime }}</span>
           </div>
         </div>
-        <div v-for="h in store.holdings" :key="h.code" class="grid items-center gap-3 py-2" style="grid-template-columns: 110px 1fr 64px">
+        <div v-for="h in holdingsWithWeight" :key="h.code" class="grid items-center gap-3 py-2" style="grid-template-columns: 110px 1fr 64px">
           <div>
             <div class="text-xs font-medium" style="color: #0f172a">{{ h.name }}</div>
             <div class="text-[10px] font-mono" style="color: #94a3b8">{{ h.code }}</div>
@@ -286,13 +329,13 @@ const dynamicColorMap = {
             <div
               class="absolute inset-y-0 left-0 rounded-full"
               :style="{
-                width: Math.abs(h.pnlPercent) / 14 * 100 + '%',
-                background: h.pnl >= 0 ? 'rgba(220,38,38,0.85)' : 'rgba(22,163,74,0.85)',
+                width: Math.min(Math.abs(h.change_pct) / 10 * 100, 100) + '%',
+                background: h.change_pct >= 0 ? 'rgba(220,38,38,0.85)' : 'rgba(22,163,74,0.85)',
               }"
             ></div>
           </div>
-          <div class="text-right text-sm font-semibold tabular-nums" :style="{ color: h.pnl >= 0 ? '#dc2626' : '#16a34a' }">
-            {{ h.pnlPercent >= 0 ? '+' : '' }}{{ h.pnlPercent }}%
+          <div class="text-right text-sm font-semibold tabular-nums" :style="{ color: h.change_pct >= 0 ? '#dc2626' : '#16a34a' }">
+            {{ h.change_pct >= 0 ? '+' : '' }}{{ h.change_pct }}%
           </div>
         </div>
       </div>

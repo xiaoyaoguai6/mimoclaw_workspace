@@ -1,7 +1,10 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import RiskBanner from '@/components/RiskBanner.vue'
+import { useAppStore } from '@/stores/app'
+import api from '@/api'
 
+const store = useAppStore()
 const period = ref('month')
 const returnMode = ref('amount')
 const currentMonth = ref('2026年6月')
@@ -14,32 +17,44 @@ const periods = [
   { key: 'custom', label: '自定义' },
 ]
 
-// 日历收益数据 (模拟)
+const aiDecisions = ref([])
+
+onMounted(async () => {
+  store.fetchAccount()
+  try {
+    aiDecisions.value = await api.getAiDecisions(50)
+  } catch (e) {
+    console.error(e)
+  }
+})
+
+const fmt = (v) => v.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
 const calendarData = [
   { day: '', offset: true },
   { day: '', offset: true },
   { day: 1, value: 0 },
-  { day: 2, value: 1200 },
-  { day: 3, value: -300 },
+  { day: 2, value: 0 },
+  { day: 3, value: 0 },
   { day: 4, value: 0 },
   { day: 5, value: 0 },
-  { day: 6, value: 2800 },
-  { day: 7, value: -150 },
+  { day: 6, value: 0 },
+  { day: 7, value: 0 },
   { day: 8, value: 0 },
-  { day: 9, value: 3600 },
-  { day: 10, value: 1500 },
-  { day: 11, value: -200 },
+  { day: 9, value: 0 },
+  { day: 10, value: 0 },
+  { day: 11, value: 0 },
   { day: 12, value: 0 },
   { day: 13, value: 0 },
-  { day: 14, value: 800 },
-  { day: 15, value: 4200 },
-  { day: 16, value: -600 },
+  { day: 14, value: 0 },
+  { day: 15, value: 0 },
+  { day: 16, value: 0 },
   { day: 17, value: 0 },
   { day: 18, value: 0 },
-  { day: 19, value: 2100 },
-  { day: 20, value: 500 },
+  { day: 19, value: 0 },
+  { day: 20, value: 0 },
   { day: 21, value: 0 },
-  { day: 22, value: 1800 },
+  { day: 22, value: 0 },
   { day: 23, value: 0, today: true },
 ]
 
@@ -50,33 +65,53 @@ const getCalendarColor = (v) => {
   return { bg: 'rgba(22,163,74,0.12)', color: '#16a34a', border: 'rgba(22,163,74,0.2)' }
 }
 
-// AI 决策记录
-const decisions = [
-  { time: '06/10 09:38', name: '圣泉集团', action: '观察', actionColor: '#64748b', reason: '综合四维分析：基本面中性偏暖但估值承压，新闻面API支撑有限，情绪与技术面短期共振但超买明显。当前已持仓2400股且为当日新建仓，严格遵循T+1规则，仅可持有观察。不追加、不减仓、不调仓，等待次日价格行为与量能验证。仅为模拟演示。', confidence: '置信度 3/5' },
-  { time: '06/10 09:33', name: '圣泉集团', action: '买入', actionColor: '#16a34a', reason: '在全部候选标的中，圣泉集团是唯一获基本面分析师明确"买入"评级、且估值（PE 47.3x）显著低于行业均值（65.2x）与中位数（88x）的标的；其化工新材料逻辑独立于高估值AI链，抗扰动性强。新闻面人民币升值对其成本端构成温和利好，风险收益比最优。仅为模拟演示。', confidence: '置信度 3/5' },
-  { time: '06/10 09:32', name: '天孚通信', action: '观察', actionColor: '#64748b', reason: '综合四位分析师判断，天孚通信在fundamental中获"持有"、news中未被覆盖但无负面、sentiment中明确标注"持有"且有010万大单异动支撑，是唯一在三维度均无卖出信号、且具备技术面与产业逻辑双重验证的标的。相较海光信息（PE 228x）与圣泉集团（纯题材涨停），其估值更可持续，适合作为AI硬件主线中的稳健持仓锚点。仅为模拟演示。', confidence: '置信度 4/5' },
-]
+const heatmapItems = computed(() => {
+  if (!store.holdings.length) return []
+  const totalMv = store.account.total_market_value || 1
+  return store.holdings
+    .map(h => {
+      const weight = (h.market_value / totalMv * 100).toFixed(1)
+      const pnlPct = h.pnl_pct
+      const absPct = Math.abs(pnlPct)
+      const color = pnlPct >= 0
+        ? `rgba(220,38,38,${Math.min(0.1 + absPct / 30, 0.5)})`
+        : `rgba(22,163,74,${Math.min(0.1 + absPct / 30, 0.5)})`
+      return {
+        name: h.name,
+        weight: `${weight}%`,
+        pnl: `${pnlPct >= 0 ? '+' : ''}${pnlPct}%`,
+        pnlColor: pnlPct >= 0 ? '#dc2626' : '#16a34a',
+        color,
+        borderColor: pnlPct >= 0 ? 'rgba(220,38,38,0.25)' : 'rgba(22,163,74,0.25)',
+        flex: Math.max(h.market_value / 100000, 0.5),
+      }
+    })
+    .sort((a, b) => parseFloat(b.weight) - parseFloat(a.weight))
+})
 
-// 持仓热力图
-const heatmapItems = [
-  { name: '圣泉集团', weight: '11.2%', pnl: '+4.25%', color: 'rgba(220,38,38,0.247)', borderColor: 'rgba(220,38,38,0.25)', flex: 1.117 },
-  { name: '中际旭创', weight: '9.0%', pnl: '-2.29%', pnlColor: '#16a34a', color: 'rgba(22,163,74,0.18)', borderColor: 'rgba(22,163,74,0.25)', flex: 0.898 },
-  { name: '亨通光电', weight: '22.2%', pnl: '+2.80%', color: 'rgba(220,38,38,0.2)', borderColor: 'rgba(220,38,38,0.25)', flex: 2.215 },
-  { name: '宁德时代', weight: '9.6%', pnl: '+0.02%', color: 'rgba(220,38,38,0.1)', borderColor: 'rgba(220,38,38,0.25)', flex: 0.956 },
-  { name: '海光信息', weight: '13.6%', pnl: '+6.58%', color: 'rgba(220,38,38,0.33)', borderColor: 'rgba(220,38,38,0.25)', flex: 1.363 },
-  { name: '中天科技', weight: '23.8%', pnl: '+2.84%', color: 'rgba(220,38,38,0.2)', borderColor: 'rgba(220,38,38,0.25)', flex: 2.376 },
-  { name: '东山精密', weight: '10.7%', pnl: '+8.98%', color: 'rgba(220,38,38,0.416)', borderColor: 'rgba(220,38,38,0.25)', flex: 1.075 },
-]
+const lossItems = computed(() => {
+  return store.holdings
+    .filter(h => h.pnl < 0)
+    .map(h => ({
+      name: h.name,
+      code: h.code,
+      industry: '',
+      trades: '1 次',
+      lossPct: `${h.pnl_pct}%`,
+      lossAmt: `-¥${fmt(Math.abs(h.pnl))}`,
+    }))
+})
 
-// 板块配置
-const sectorAllocation = [
-  { name: 'C38电气机械和器材制造业', pct: 100, count: '2只' },
-]
-
-// AI 亏损复盘
-const lossItems = [
-  { name: '中际旭创', code: '300308', industry: 'C39计算机、通信和其他电子设备制造业', trades: '3 次', lossPct: '-2.29%', lossAmt: '-¥5,266' },
-]
+const decisions = computed(() => {
+  return aiDecisions.value.map(d => ({
+    time: d.ts ? new Date(d.ts).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '',
+    name: d.name,
+    action: d.action,
+    actionColor: d.action === '买入' ? '#16a34a' : d.action === '卖出' ? '#dc2626' : '#64748b',
+    reason: d.reason || '',
+    confidence: d.confidence || '—',
+  }))
+})
 </script>
 
 <template>
@@ -112,13 +147,15 @@ const lossItems = [
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
       <div class="lg:col-span-1 rounded-xl p-5" style="background: #fff; border: 1px solid #e2e8f0">
         <p class="text-xs mb-2" style="color: #64748b">累计收益率</p>
-        <div class="text-5xl font-black mb-1" style="color: #dc2626">+8.44%</div>
+        <div class="text-5xl font-black mb-1" :style="{ color: store.account.total_pnl_pct >= 0 ? '#dc2626' : '#16a34a' }">
+          {{ store.account.total_pnl_pct >= 0 ? '+' : '' }}{{ store.account.total_pnl_pct }}%
+        </div>
         <div class="flex items-center gap-2 mb-4">
-          <span class="text-xs" style="color: #94a3b8">最大回撤：3.59%</span>
+          <span class="text-xs" style="color: #94a3b8">基于实时持仓计算</span>
         </div>
         <div class="pt-3" style="border-top: 1px solid #f1f5f9">
           <p class="text-xs mb-1" style="color: #94a3b8">资产净值</p>
-          <p class="text-xl font-bold" style="color: #0f172a">¥1,084,407.41</p>
+          <p class="text-xl font-bold" style="color: #0f172a">¥{{ fmt(store.account.total_assets) }}</p>
         </div>
       </div>
       <div class="lg:col-span-2 rounded-xl p-5" style="background: #fff; border: 1px solid #e2e8f0">
@@ -228,9 +265,9 @@ const lossItems = [
     <div class="rounded-xl p-5" style="background: #fff; border: 1px solid #e2e8f0">
       <div class="flex items-center justify-between mb-4">
         <h4 class="text-sm font-semibold" style="color: #0f172a">AI 决策记录</h4>
-        <span class="text-xs" style="color: #94a3b8">本月共 {{ decisions.length }} 条决策</span>
+        <span class="text-xs" style="color: #94a3b8">共 {{ decisions.length }} 条决策</span>
       </div>
-      <div class="overflow-x-auto">
+      <div v-if="decisions.length" class="overflow-x-auto">
         <table class="w-full text-sm">
           <thead>
             <tr style="border-bottom: 1px solid #f1f5f9">
@@ -253,9 +290,9 @@ const lossItems = [
                 <span
                   class="px-2.5 py-1 rounded-full text-xs font-bold"
                   :style="{
-                    background: d.action === '买入' ? 'rgba(22,163,74,0.08)' : 'rgba(100,116,139,0.08)',
+                    background: d.action === '买入' ? 'rgba(22,163,74,0.08)' : d.action === '卖出' ? 'rgba(220,38,38,0.08)' : 'rgba(100,116,139,0.08)',
                     color: d.actionColor,
-                    border: '1px solid ' + (d.action === '买入' ? 'rgba(22,163,74,0.2)' : 'rgba(100,116,139,0.2)')
+                    border: '1px solid ' + (d.action === '买入' ? 'rgba(22,163,74,0.2)' : d.action === '卖出' ? 'rgba(220,38,38,0.2)' : 'rgba(100,116,139,0.2)')
                   }"
                 >{{ d.action }}</span>
               </td>
@@ -277,6 +314,10 @@ const lossItems = [
           </tbody>
         </table>
       </div>
+      <div v-else class="py-8 text-center">
+        <i class="ri-history-line text-2xl" style="color: #cbd5e1"></i>
+        <p class="text-sm mt-2" style="color: #94a3b8">暂无 AI 决策记录</p>
+      </div>
     </div>
 
     <!-- 持仓热力图 -->
@@ -292,23 +333,26 @@ const lossItems = [
           </div>
         </div>
       </div>
-      <div class="flex gap-2 h-52">
-        <div
-          v-for="item in heatmapItems"
-          :key="item.name"
-          role="button"
-          tabindex="0"
-          title="点击查看 AI 决策 + 成交全过程复盘"
-          class="flex flex-col justify-between p-3 rounded-xl cursor-pointer transition-all hover:scale-105"
-          :style="{ background: item.color, border: '1px solid ' + item.borderColor, flex: item.flex + ' 1 0%' }"
-        >
-          <div>
-            <p class="text-xs font-bold" style="color: #0f172a">{{ item.name }}</p>
-            <p class="text-xs" style="color: #64748b">{{ item.weight }}</p>
+      <div v-if="heatmapItems.length" class="flex gap-2 h-52">
+          <div
+            v-for="item in heatmapItems"
+            :key="item.name"
+            role="button"
+            tabindex="0"
+            title="点击查看 AI 决策 + 成交全过程复盘"
+            class="flex flex-col justify-between p-3 rounded-xl cursor-pointer transition-all hover:scale-105"
+            :style="{ background: item.color, border: '1px solid ' + item.borderColor, flex: item.flex + ' 1 0%' }"
+          >
+            <div>
+              <p class="text-xs font-bold" style="color: #0f172a">{{ item.name }}</p>
+              <p class="text-xs" style="color: #64748b">{{ item.weight }}</p>
+            </div>
+            <p class="text-sm font-black" :style="{ color: item.pnlColor || '#dc2626' }">{{ item.pnl }}</p>
           </div>
-          <p class="text-sm font-black" :style="{ color: item.pnlColor || '#dc2626' }">{{ item.pnl }}</p>
         </div>
-      </div>
+        <div v-else class="h-52 flex items-center justify-center">
+          <span class="text-sm" style="color: #94a3b8">暂无持仓数据</span>
+        </div>
     </div>
 
     <!-- 板块配置 -->
@@ -317,20 +361,23 @@ const lossItems = [
         <h4 class="text-sm font-semibold" style="color: #0f172a">当前板块配置</h4>
         <span class="text-xs" style="color: #94a3b8">颜色深度 = AI仓位权重</span>
       </div>
-      <div class="space-y-2">
-        <div v-for="sector in sectorAllocation" :key="sector.name" class="flex items-center gap-3">
-          <span class="text-xs w-28 shrink-0" style="color: #334155">{{ sector.name }}</span>
-          <div class="flex-1 min-w-0 h-7 rounded-lg overflow-hidden relative" style="background: rgba(245,166,35,0.06)">
-            <div
-              class="absolute inset-y-0 left-0 rounded-lg flex items-center px-2 transition-all"
-              :style="{ width: sector.pct + '%', minWidth: '48px', background: 'rgba(245,166,35,0.65)', border: '1px solid rgba(245,166,35,0.75)' }"
-            >
-              <span class="text-xs font-semibold whitespace-nowrap" style="color: #d97706">{{ sector.pct }}.0%</span>
+      <div v-if="store.holdings.length" class="space-y-2">
+          <div class="flex items-center gap-3">
+            <span class="text-xs w-28 shrink-0" style="color: #334155">持仓分布</span>
+            <div class="flex-1 min-w-0 h-7 rounded-lg overflow-hidden relative" style="background: rgba(245,166,35,0.06)">
+              <div
+                class="absolute inset-y-0 left-0 rounded-lg flex items-center px-2 transition-all"
+                :style="{ width: store.account.position_usage + '%', minWidth: '48px', background: 'rgba(245,166,35,0.65)', border: '1px solid rgba(245,166,35,0.75)' }"
+              >
+                <span class="text-xs font-semibold whitespace-nowrap" style="color: #d97706">{{ store.account.position_usage }}%</span>
+              </div>
             </div>
+            <span class="text-xs w-8 shrink-0 text-right" style="color: #94a3b8">{{ store.holdings.length }}只</span>
           </div>
-          <span class="text-xs w-8 shrink-0 text-right" style="color: #94a3b8">{{ sector.count }}</span>
         </div>
-      </div>
+        <div v-else class="text-center py-4">
+          <span class="text-sm" style="color: #94a3b8">暂无持仓</span>
+        </div>
     </div>
 
     <!-- AI 亏损复盘 -->
@@ -340,16 +387,14 @@ const lossItems = [
         <span class="text-xs px-2 py-0.5 rounded-full" style="background: rgba(220,38,38,0.06); color: #dc2626; border: 1px solid rgba(220,38,38,0.15)">亏损仓位</span>
         <span class="text-xs ml-1" style="color: #94a3b8">透明展示AI的亏损，建立信任</span>
       </div>
-      <div class="overflow-x-auto">
+      <div v-if="lossItems.length" class="overflow-x-auto">
         <table class="w-full text-sm">
           <thead>
             <tr style="border-bottom: 1px solid #f1f5f9">
               <th class="text-left px-3 py-3 text-xs font-medium whitespace-nowrap" style="color: #94a3b8">股票</th>
               <th class="text-left px-3 py-3 text-xs font-medium whitespace-nowrap" style="color: #94a3b8">行业</th>
-              <th class="text-left px-3 py-3 text-xs font-medium whitespace-nowrap" style="color: #94a3b8">交易次数</th>
               <th class="text-left px-3 py-3 text-xs font-medium whitespace-nowrap" style="color: #94a3b8">亏损幅度</th>
               <th class="text-left px-3 py-3 text-xs font-medium whitespace-nowrap" style="color: #94a3b8">亏损金额</th>
-              <th class="text-left px-3 py-3 text-xs font-medium whitespace-nowrap" style="color: #94a3b8"></th>
             </tr>
           </thead>
           <tbody>
@@ -358,25 +403,20 @@ const lossItems = [
                 <div class="font-semibold text-xs" style="color: #0f172a">{{ item.name }}</div>
                 <div class="text-xs" style="color: #94a3b8">{{ item.code }}</div>
               </td>
-              <td class="px-3 py-4 text-xs" style="color: #64748b">{{ item.industry }}</td>
-              <td class="px-3 py-4 text-xs" style="color: #64748b">{{ item.trades }}</td>
+              <td class="px-3 py-4 text-xs" style="color: #64748b">{{ item.industry || '—' }}</td>
               <td class="px-3 py-4">
                 <span class="text-sm font-bold" style="color: #16a34a">{{ item.lossPct }}</span>
               </td>
               <td class="px-3 py-4">
                 <span class="text-sm font-bold" style="color: #16a34a">{{ item.lossAmt }}</span>
               </td>
-              <td class="px-3 py-4">
-                <div class="flex items-center gap-1.5 whitespace-nowrap">
-                  <button class="px-2.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer hover:bg-violet-50" style="background: rgba(124,58,237,0.06); border: 1px solid rgba(124,58,237,0.2); color: #7c3aed">
-                    <i class="ri-history-line mr-1"></i>复盘
-                  </button>
-                  <button class="px-2.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer hover:bg-orange-50" style="background: rgba(245,166,35,0.06); border: 1px solid rgba(245,166,35,0.2); color: #d97706">追问 AI</button>
-                </div>
-              </td>
             </tr>
           </tbody>
         </table>
+      </div>
+      <div v-else class="py-8 text-center">
+        <i class="ri-emotion-happy-line text-2xl" style="color: #22c55e"></i>
+        <p class="text-sm mt-2" style="color: #94a3b8">当前无亏损持仓 🎉</p>
       </div>
     </div>
   </div>

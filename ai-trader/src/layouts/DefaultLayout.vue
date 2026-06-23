@@ -1,4 +1,5 @@
 <script setup>
+import { onMounted, onUnmounted } from 'vue'
 import { useAppStore } from '@/stores/app'
 import AppHeader from '@/components/AppHeader.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
@@ -6,6 +7,20 @@ import AiChatButton from '@/components/AiChatButton.vue'
 import CustomerService from '@/components/CustomerService.vue'
 
 const store = useAppStore()
+
+let refreshTimer = null
+
+onMounted(() => {
+  store.fetchAll()
+  refreshTimer = setInterval(() => {
+    store.fetchMarketIndices()
+    store.fetchAccount()
+  }, 15000)
+})
+
+onUnmounted(() => {
+  if (refreshTimer) clearInterval(refreshTimer)
+})
 </script>
 
 <template>

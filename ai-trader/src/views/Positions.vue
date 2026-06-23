@@ -1,44 +1,100 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import RiskBanner from '@/components/RiskBanner.vue'
+import { useAppStore } from '@/stores/app'
+import api from '@/api'
 
+const store = useAppStore()
 const activeTab = ref('current')
 const riskExpanded = ref(true)
 
-const summaryStats = [
-  { label: '今日盈亏', value: '+¥0', color: '#dc2626' },
-  { label: '累计收益率', value: '+8.44%', color: '#dc2626' },
-  { label: '总浮动盈亏', value: '+¥4,047', color: '#dc2626' },
-  { label: '浮动盈亏率', value: '+0.40%', color: '#dc2626' },
-]
+const tradeHistory = ref([])
 
-const riskConcentration = [
-  { name: '宁德时代', pct: 63, color: '#d97706' },
-  { name: '亨通光电', pct: 37, color: '#f59e0b' },
-]
-
-const positions = ref([
-  {
-    code: '600487', name: '亨通光电', shares: '1,200 股', costAvg: '¥116.79', current: '¥120.13',
-    costTotal: '¥140,151', marketValue: '¥144,156', pnl: '+¥4,005', pnlPct: '+2.86%',
-    tp: '¥123.33 (+2.7%)', sl: '¥109.24 (-9.1%)',
-    buildDate: '06/10', buildAgo: '13 天前', aiStatus: '持有中', aiSub: '已止盈 2 档',
-    aiStatusColor: '#16a34a',
-  },
-  {
-    code: '300750', name: '宁德时代', shares: '600 股', costAvg: '¥408.91', current: '¥408.98',
-    costTotal: '¥245,346', marketValue: '¥245,388', pnl: '+¥42', pnlPct: '+0.02%',
-    tp: '¥419.13 (+2.5%)', sl: '¥398.40 (-2.6%)',
-    buildDate: '06/22', buildAgo: '昨天建仓', aiStatus: '持有中', aiSub: '',
-    aiStatusColor: '#16a34a',
-  },
-])
-
-const totals = computed(() => {
-  return { costTotal: '¥385,497', marketValue: '¥389,544', pnl: '+¥4,047', pnlPct: '+0.40%' }
+onMounted(async () => {
+  store.fetchAccount()
+  try {
+    tradeHistory.value = await api.getTradeHistory(50)
+  } catch (e) {
+    console.error(e)
+  }
 })
 
-const drawdownMin = { name: '宁德时代', pct: '+0.02%', profit: '盈利 ¥42', status: '持有中' }
+const fmt = (v) => v.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
+const summaryStats = computed(() => {
+  const a = store.account
+  return [
+    { label: '今日盈亏', value: `${a.today_pnl >= 0 ? '+' : ''}¥${fmt(a.today_pnl)}`, color: a.today_pnl >= 0 ? '#dc2626' : '#16a34a' },
+    { label: '累计收益率', value: `${a.total_pnl_pct >= 0 ? '+' : ''}${a.total_pnl_pct}%`, color: a.total_pnl_pct >= 0 ? '#dc2626' : '#16a34a' },
+    { label: '总浮动盈亏', value: `${a.unrealized_pnl >= 0 ? '+' : ''}¥${fmt(a.unrealized_pnl)}`, color: a.unrealized_pnl >= 0 ? '#dc2626' : '#16a34a' },
+    { label: '可用资金', value: `¥${fmt(a.available_cash)}`, color: '#0f172a' },
+  ]
+})
+
+const positions = computed(() => {
+  return store.holdings.map(h => ({
+    code: h.code,
+    name: h.name,
+    shares: `${h.qty.toLocaleString()} 股`,
+    costAvg: `¥${h.cost_avg}`,
+    current: `¥${h.current_price}`,
+    costTotal: `¥${fmt(h.cost_total)}`,
+    marketValue: `¥${fmt(h.market_value)}`,
+    pnl: `${h.pnl >= 0 ? '+' : ''}¥${fmt(h.pnl)}`,
+    pnlPct: `${h.pnl_pct >= 0 ? '+' : ''}${h.pnl_pct}%`,
+    pnlRaw: h.pnl,
+    pnlPctRaw: h.pnl_pct,
+    changePct: h.change_pct,
+    builtDate: (h.built_at || '').slice(5, 10).replace('-', '/'),
+    aiStatus: '持有中',
+    aiSub: '',
+    aiStatusColor: '#16a34a',
+  }))
+})
+
+const totals = computed(() => {
+  const a = store.account
+  return {
+    costTotal: `¥${fmt(store.holdings.reduce((s, h) => s + h.cost_total, 0))}`,
+    marketValue: `¥${fmt(a.total_market_value)}`,
+    pnl: `${a.unrealized_pnl >= 0 ? '+' : ''}¥${fmt(a.unrealized_pnl)}`,
+    pnlPct: store.holdings.length
+      ? `${(store.holdings.reduce((s, h) => s + h.pnl_pct, 0) / store.holdings.length).toFixed(2)}%`
+      : '0.00%',
+  }
+})
+
+const riskConcentration = computed(() => {
+  const total = store.account.total_market_value || 1
+  return store.holdings
+    .map(h => ({
+      name: h.name,
+      pct: (h.market_value / total * 100).toFixed(1),
+      color: h.market_value / total * 100 > 50 ? '#d97706' : '#f59e0b',
+    }))
+    .sort((a, b) => parseFloat(b.pct) - parseFloat(a.pct))
+})
+
+const maxSinglePosition = computed(() => {
+  if (!riskConcentration.value.length) return '0.0%'
+  return riskConcentration.value[0].pct + '%'
+})
+
+const drawdownMin = computed(() => {
+  if (!store.holdings.length) return null
+  const min = store.holdings.reduce((m, h) => h.pnl_pct < m.pnl_pct ? h : m, store.holdings[0])
+  return {
+    name: min.name,
+    pct: `${min.pnl_pct >= 0 ? '+' : ''}${min.pnl_pct}%`,
+    profit: `${min.pnl >= 0 ? '盈利' : '亏损'} ¥${fmt(Math.abs(min.pnl))}`,
+    status: '持有中',
+  }
+})
+
+const fmtHistory = (h) => {
+  const d = new Date(h.ts)
+  return `${(d.getMonth()+1).toString().padStart(2,'0')}/${d.getDate().toString().padStart(2,'0')} ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`
+}
 </script>
 
 <template>
@@ -49,7 +105,13 @@ const drawdownMin = { name: '宁德时代', pct: '+0.02%', profit: '盈利 ¥42'
     <div class="flex items-center justify-between mb-5">
       <div></div>
       <div class="flex items-center gap-3">
-        <div v-for="stat in summaryStats" :key="stat.label" class="text-right" :class="stat !== summaryStats[summaryStats.length - 1] ? 'pr-3' : ''" :style="stat !== summaryStats[summaryStats.length - 1] ? { borderRight: '1px solid #e2e8f0' } : {}">
+        <div
+          v-for="stat in summaryStats"
+          :key="stat.label"
+          class="text-right"
+          :class="stat !== summaryStats[summaryStats.length - 1] ? 'pr-3' : ''"
+          :style="stat !== summaryStats[summaryStats.length - 1] ? { borderRight: '1px solid #e2e8f0' } : {}"
+        >
           <p class="text-xs" style="color: #94a3b8">{{ stat.label }}</p>
           <p class="text-lg font-bold" :style="{ color: stat.color }">{{ stat.value }}</p>
         </div>
@@ -57,7 +119,7 @@ const drawdownMin = { name: '宁德时代', pct: '+0.02%', profit: '盈利 ¥42'
     </div>
 
     <!-- 整体风险评估 -->
-    <div class="rounded-xl mb-5 overflow-hidden" style="background: #fff; border: 1px solid #e2e8f0">
+    <div v-if="positions.length" class="rounded-xl mb-5 overflow-hidden" style="background: #fff; border: 1px solid #e2e8f0">
       <button
         class="w-full flex items-center justify-between px-5 py-3.5 cursor-pointer"
         style="border-bottom: 1px solid #f1f5f9"
@@ -69,12 +131,16 @@ const drawdownMin = { name: '宁德时代', pct: '+0.02%', profit: '盈利 ¥42'
           </div>
           <div class="text-left">
             <p class="text-sm font-bold" style="color: #0f172a">整体风险评估</p>
-            <p class="text-xs" style="color: #94a3b8">基于当前 2 只持仓的综合风险分析</p>
+            <p class="text-xs" style="color: #94a3b8">基于当前 {{ positions.length }} 只持仓的综合风险分析</p>
           </div>
         </div>
         <div class="flex items-center gap-3">
-          <span class="px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap" style="background: rgba(220,38,38,0.08); color: #dc2626; border: 1px solid rgba(220,38,38,0.2)">
-            <i class="ri-alarm-warning-line mr-1"></i>高风险
+          <span class="px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap" :style="{
+            background: parseFloat(maxSinglePosition) > 50 ? 'rgba(220,38,38,0.08)' : 'rgba(22,163,74,0.08)',
+            color: parseFloat(maxSinglePosition) > 50 ? '#dc2626' : '#16a34a',
+            border: `1px solid ${parseFloat(maxSinglePosition) > 50 ? 'rgba(220,38,38,0.2)' : 'rgba(22,163,74,0.2)'}`,
+          }">
+            <i class="ri-alarm-warning-line mr-1"></i>{{ parseFloat(maxSinglePosition) > 50 ? '高' : '低' }}风险
           </span>
           <i class="ri-arrow-up-s-line text-sm transition-transform duration-200" :style="{ color: '#94a3b8', transform: riskExpanded ? 'rotate(0deg)' : 'rotate(180deg)' }"></i>
         </div>
@@ -92,10 +158,10 @@ const drawdownMin = { name: '宁德时代', pct: '+0.02%', profit: '盈利 ¥42'
                 <span class="text-xs font-semibold" style="color: #334155">仓位集中度</span>
               </div>
               <div class="mb-3 space-y-2">
-                <div v-for="item in riskConcentration" :key="item.name">
+                <div v-for="item in riskConcentration.slice(0, 5)" :key="item.name">
                   <div class="flex items-center justify-between mb-0.5">
                     <span class="text-xs" style="color: #64748b">{{ item.name }}</span>
-                    <span class="text-xs font-semibold" :style="{ color: item.pct > 50 ? '#d97706' : '#334155' }">{{ item.pct }}.0%</span>
+                    <span class="text-xs font-semibold" :style="{ color: parseFloat(item.pct) > 50 ? '#d97706' : '#334155' }">{{ item.pct }}%</span>
                   </div>
                   <div class="h-1.5 rounded-full" style="background: #e2e8f0">
                     <div class="h-full rounded-full" :style="{ width: item.pct + '%', background: item.color }"></div>
@@ -105,16 +171,12 @@ const drawdownMin = { name: '宁德时代', pct: '+0.02%', profit: '盈利 ¥42'
               <div class="grid grid-cols-2 gap-2 pt-2" style="border-top: 1px solid #e2e8f0">
                 <div>
                   <p class="text-xs" style="color: #94a3b8">最大单仓</p>
-                  <p class="text-sm font-bold mt-0.5" style="color: #dc2626">63.0%</p>
+                  <p class="text-sm font-bold mt-0.5" :style="{ color: parseFloat(maxSinglePosition) > 50 ? '#dc2626' : '#334155' }">{{ maxSinglePosition }}</p>
                 </div>
                 <div>
-                  <p class="text-xs" style="color: #94a3b8">前2仓合计</p>
-                  <p class="text-sm font-bold mt-0.5" style="color: #d97706">100.0%</p>
+                  <p class="text-xs" style="color: #94a3b8">持仓数</p>
+                  <p class="text-sm font-bold mt-0.5" style="color: #334155">{{ positions.length }} 只</p>
                 </div>
-              </div>
-              <div class="mt-2 flex items-start gap-1.5 px-2 py-1.5 rounded-lg" style="background: rgba(245,166,35,0.06)">
-                <i class="ri-alert-line text-xs mt-0.5 shrink-0" style="color: #d97706"></i>
-                <p class="text-xs leading-relaxed" style="color: #92400e">宁德时代占比偏高，建议适当分散</p>
               </div>
             </div>
 
@@ -131,17 +193,24 @@ const drawdownMin = { name: '宁德时代', pct: '+0.02%', profit: '盈利 ¥42'
                   <span>0%</span><span>-5%</span><span>-10%</span>
                 </div>
                 <div class="h-2 rounded-full" style="background: linear-gradient(to right, #22c55e, #f59e0b, #dc2626)">
-                  <div class="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-white" style="left: 0.17%; background: #22c55e; margin-top: 4px"></div>
+                  <div
+                    class="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-white"
+                    :style="{
+                      left: drawdownMin ? Math.min(Math.abs(drawdownMin.pct.replace('+','')) / 10 * 100, 100) + '%' : '0%',
+                      background: drawdownMin && parseFloat(drawdownMin.pct) >= 0 ? '#22c55e' : '#dc2626',
+                      marginTop: '4px',
+                    }"
+                  ></div>
                 </div>
               </div>
-              <div class="text-center mb-3">
-                <p class="text-2xl font-bold" style="color: #dc2626">+0.02%</p>
-                <p class="text-xs mt-0.5" style="color: #94a3b8">最小单仓盈亏率（当前无浮亏持仓）</p>
+              <div class="text-center mb-3" v-if="drawdownMin">
+                <p class="text-2xl font-bold" :style="{ color: parseFloat(drawdownMin.pct) >= 0 ? '#dc2626' : '#16a34a' }">{{ drawdownMin.pct }}</p>
+                <p class="text-xs mt-0.5" style="color: #94a3b8">最小单仓盈亏率</p>
               </div>
-              <div class="rounded-lg p-2.5" style="background: #f8fafc; border: 1px solid #f1f5f9">
+              <div v-if="drawdownMin" class="rounded-lg p-2.5" style="background: #f8fafc; border: 1px solid #f1f5f9">
                 <div class="flex items-center justify-between">
                   <span class="text-xs font-semibold" style="color: #334155">{{ drawdownMin.name }}</span>
-                  <span class="text-xs font-semibold" style="color: #dc2626">{{ drawdownMin.pct }}</span>
+                  <span class="text-xs font-semibold" :style="{ color: parseFloat(drawdownMin.pct) >= 0 ? '#dc2626' : '#16a34a' }">{{ drawdownMin.pct }}</span>
                 </div>
                 <p class="text-xs mt-1" style="color: #94a3b8">{{ drawdownMin.profit }} · AI状态：{{ drawdownMin.status }}</p>
               </div>
@@ -153,54 +222,21 @@ const drawdownMin = { name: '宁德时代', pct: '+0.02%', profit: '盈利 ¥42'
                 <div class="w-6 h-6 flex items-center justify-center rounded" style="background: rgba(100,116,139,0.1)">
                   <i class="ri-price-tag-3-line text-xs" style="color: #64748b"></i>
                 </div>
-                <span class="text-xs font-semibold" style="color: #334155">止损距离</span>
+                <span class="text-xs font-semibold" style="color: #334155">持仓盈亏分布</span>
               </div>
               <div class="space-y-3 mb-3">
-                <div>
+                <div v-for="p in positions" :key="p.code">
                   <div class="flex items-center justify-between mb-1">
-                    <span class="text-xs" style="color: #64748b">宁德时代</span>
-                    <div class="flex items-center gap-1.5">
-                      <span class="text-xs font-semibold" style="color: #dc2626">距止损 2.6%</span>
-                      <span class="w-1.5 h-1.5 rounded-full animate-pulse" style="background: #dc2626"></span>
-                    </div>
+                    <span class="text-xs" style="color: #64748b">{{ p.name }}</span>
+                    <span class="text-xs font-semibold" :style="{ color: p.pnlPctRaw >= 0 ? '#dc2626' : '#16a34a' }">
+                      {{ p.pnlPct }}
+                    </span>
                   </div>
                   <div class="flex items-center gap-1 text-xs" style="color: #94a3b8">
-                    <span>现价 ¥408.98</span><span>→</span><span style="color: #dc2626">止损 ¥398.40</span>
-                  </div>
-                  <div class="mt-1 px-2 py-1 rounded text-xs" style="background: rgba(220,38,38,0.06); color: #dc2626">
-                    <i class="ri-alarm-warning-line mr-1"></i>临近止损线，AI 正在监控
-                  </div>
-                </div>
-                <div>
-                  <div class="flex items-center justify-between mb-1">
-                    <span class="text-xs" style="color: #64748b">亨通光电</span>
-                    <div class="flex items-center gap-1.5">
-                      <span class="text-xs font-semibold" style="color: #16a34a">距止损 9.1%</span>
-                    </div>
-                  </div>
-                  <div class="flex items-center gap-1 text-xs" style="color: #94a3b8">
-                    <span>现价 ¥120.13</span><span>→</span><span style="color: #dc2626">止损 ¥109.24</span>
+                    <span>现价 {{ p.current }}</span><span>→</span><span>成本 {{ p.costAvg }}</span>
                   </div>
                 </div>
               </div>
-              <div class="pt-2 flex items-center justify-between" style="border-top: 1px solid #e2e8f0">
-                <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background: #22c55e"></span><span class="text-xs" style="color: #94a3b8">安全区 &gt;6%</span></div>
-                <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background: #d97706"></span><span class="text-xs" style="color: #94a3b8">预警区 3-6%</span></div>
-                <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background: #dc2626"></span><span class="text-xs" style="color: #94a3b8">危险区 &lt;3%</span></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- AI 风险建议 -->
-          <div class="mt-4 flex items-start gap-3 px-4 py-3 rounded-xl" style="background: rgba(245,166,35,0.04); border: 1px solid rgba(245,166,35,0.15)">
-            <div class="w-6 h-6 flex items-center justify-center rounded-full shrink-0 mt-0.5" style="background: rgba(245,166,35,0.12)">
-              <i class="ri-robot-line text-xs" style="color: #d97706"></i>
-            </div>
-            <div>
-              <p class="text-xs font-semibold mb-0.5" style="color: #d97706">AI 风险建议</p>
-              <p class="text-xs leading-relaxed" style="color: #64748b">
-                当前组合整体风险<span class="font-semibold mx-1" style="color: #dc2626">高风险</span>。建议降低 宁德时代 仓位至 15% 以内以提升分散度；各持仓盈亏状态正常；止损机制运行中，如触发将自动执行。
-              </p>
             </div>
           </div>
         </div>
@@ -227,7 +263,7 @@ const drawdownMin = { name: '宁德时代', pct: '+0.02%', profit: '盈利 ¥42'
 
     <!-- 当前持仓表格 -->
     <div v-if="activeTab === 'current'" class="rounded-xl overflow-hidden" style="background: #fff; border: 1px solid #e2e8f0">
-      <div class="overflow-x-auto">
+      <div v-if="positions.length" class="overflow-x-auto">
         <table class="w-full text-sm">
           <thead>
             <tr style="border-bottom: 1px solid #f1f5f9; background: #fafbfc">
@@ -239,10 +275,9 @@ const drawdownMin = { name: '宁德时代', pct: '+0.02%', profit: '盈利 ¥42'
               <th class="text-left px-4 py-3.5 text-xs font-medium whitespace-nowrap" style="color: #94a3b8">持仓市值</th>
               <th class="text-left px-4 py-3.5 text-xs font-medium whitespace-nowrap" style="color: #94a3b8">浮动盈亏</th>
               <th class="text-left px-4 py-3.5 text-xs font-medium whitespace-nowrap" style="color: #94a3b8">盈亏率</th>
-              <th class="text-left px-4 py-3.5 text-xs font-medium whitespace-nowrap" style="color: #94a3b8">风控阶段</th>
-              <th class="text-left px-4 py-3.5 text-xs font-medium whitespace-nowrap" style="color: #94a3b8">AI建仓时间</th>
+              <th class="text-left px-4 py-3.5 text-xs font-medium whitespace-nowrap" style="color: #94a3b8">今日涨跌</th>
+              <th class="text-left px-4 py-3.5 text-xs font-medium whitespace-nowrap" style="color: #94a3b8">建仓时间</th>
               <th class="text-left px-4 py-3.5 text-xs font-medium whitespace-nowrap" style="color: #94a3b8">AI状态</th>
-              <th class="text-left px-4 py-3.5 text-xs font-medium whitespace-nowrap" style="color: #94a3b8">操作</th>
             </tr>
           </thead>
           <tbody>
@@ -257,41 +292,19 @@ const drawdownMin = { name: '宁德时代', pct: '+0.02%', profit: '盈利 ¥42'
               <td class="px-4 py-4 whitespace-nowrap" style="color: #64748b">{{ pos.costTotal }}</td>
               <td class="px-4 py-4 whitespace-nowrap font-semibold" style="color: #334155">{{ pos.marketValue }}</td>
               <td class="px-4 py-4">
-                <span class="font-semibold whitespace-nowrap" style="color: #dc2626">{{ pos.pnl }}</span>
+                <span class="font-semibold whitespace-nowrap" :style="{ color: pos.pnlRaw >= 0 ? '#dc2626' : '#16a34a' }">{{ pos.pnl }}</span>
               </td>
               <td class="px-4 py-4">
-                <span class="font-semibold whitespace-nowrap" style="color: #dc2626">{{ pos.pnlPct }}</span>
+                <span class="font-semibold whitespace-nowrap" :style="{ color: pos.pnlPctRaw >= 0 ? '#dc2626' : '#16a34a' }">{{ pos.pnlPct }}</span>
               </td>
               <td class="px-4 py-4">
-                <div class="flex flex-col gap-1">
-                  <span class="text-[10px] px-1.5 py-0.5 rounded font-medium whitespace-nowrap" style="background: rgba(22,163,74,0.08); color: #16a34a">TP {{ pos.tp }}</span>
-                  <span class="text-[10px] px-1.5 py-0.5 rounded font-medium whitespace-nowrap" style="background: rgba(220,38,38,0.08); color: #dc2626">SL {{ pos.sl }}</span>
-                </div>
+                <span class="font-semibold whitespace-nowrap" :style="{ color: pos.changePct >= 0 ? '#dc2626' : '#16a34a' }">
+                  {{ pos.changePct >= 0 ? '+' : '' }}{{ pos.changePct }}%
+                </span>
               </td>
-              <td class="px-4 py-4 text-xs" style="color: #64748b">
-                <div class="leading-tight">
-                  <div class="whitespace-nowrap">{{ pos.buildDate }}</div>
-                  <div class="text-[11px] mt-0.5 whitespace-nowrap" style="color: #94a3b8">{{ pos.buildAgo }}</div>
-                </div>
-              </td>
+              <td class="px-4 py-4 text-xs" style="color: #64748b">{{ pos.builtDate }}</td>
               <td class="px-4 py-4">
-                <div class="flex flex-col items-start gap-1">
-                  <span class="px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap" style="background: rgba(22,163,74,0.08); color: #16a34a; border: 1px solid rgba(22,163,74,0.15)">{{ pos.aiStatus }}</span>
-                  <span v-if="pos.aiSub" class="text-[10px] whitespace-nowrap" style="color: #94a3b8">{{ pos.aiSub }}</span>
-                </div>
-              </td>
-              <td class="px-4 py-4">
-                <div class="flex items-center gap-1.5 whitespace-nowrap">
-                  <button class="px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer whitespace-nowrap transition-all hover:bg-orange-50" style="background: rgba(245,166,35,0.06); border: 1px solid rgba(245,166,35,0.2); color: #d97706">
-                    <i class="ri-route-line mr-1"></i>决策过程
-                  </button>
-                  <button class="px-2.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer whitespace-nowrap transition-all hover:bg-slate-50" style="background: #f8fafc; border: 1px solid #e2e8f0; color: #475569">
-                    <i class="ri-arrow-up-circle-line mr-0.5"></i>买入明细
-                  </button>
-                  <button class="px-2.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer whitespace-nowrap transition-all hover:bg-slate-50" style="background: #f8fafc; border: 1px solid #e2e8f0; color: #475569">
-                    <i class="ri-arrow-down-circle-line mr-0.5"></i>卖出明细
-                  </button>
-                </div>
+                <span class="px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap" style="background: rgba(22,163,74,0.08); color: #16a34a; border: 1px solid rgba(22,163,74,0.15)">{{ pos.aiStatus }}</span>
               </td>
             </tr>
           </tbody>
@@ -300,23 +313,65 @@ const drawdownMin = { name: '宁德时代', pct: '+0.02%', profit: '盈利 ¥42'
               <td colspan="4" class="px-4 py-3.5 text-sm font-bold" style="color: #0f172a">合计</td>
               <td class="px-4 py-3.5 text-sm font-bold whitespace-nowrap" style="color: #64748b">{{ totals.costTotal }}</td>
               <td class="px-4 py-3.5 text-sm font-bold whitespace-nowrap" style="color: #334155">{{ totals.marketValue }}</td>
-              <td class="px-4 py-3.5"><span class="font-bold text-sm whitespace-nowrap" style="color: #dc2626">{{ totals.pnl }}</span></td>
-              <td class="px-4 py-3.5"><span class="font-bold text-sm whitespace-nowrap" style="color: #dc2626">{{ totals.pnlPct }}</span></td>
-              <td colspan="4"></td>
+              <td class="px-4 py-3.5"><span class="font-bold text-sm whitespace-nowrap" :style="{ color: store.account.unrealized_pnl >= 0 ? '#dc2626' : '#16a34a' }">{{ totals.pnl }}</span></td>
+              <td class="px-4 py-3.5"><span class="font-bold text-sm whitespace-nowrap" :style="{ color: store.account.unrealized_pnl >= 0 ? '#dc2626' : '#16a34a' }">{{ totals.pnlPct }}</span></td>
+              <td colspan="3"></td>
             </tr>
           </tfoot>
         </table>
       </div>
-      <div class="px-4 py-3 flex items-center gap-2" style="border-top: 1px solid #f1f5f9; background: #fafbfc">
+      <div v-else class="p-10 text-center">
+        <i class="ri-inbox-line text-3xl" style="color: #cbd5e1"></i>
+        <p class="text-sm mt-3" style="color: #94a3b8">暂无持仓，去模拟交易页建仓</p>
+      </div>
+      <div v-if="positions.length" class="px-4 py-3 flex items-center gap-2" style="border-top: 1px solid #f1f5f9; background: #fafbfc">
         <i class="ri-information-line text-xs" style="color: #d97706"></i>
-        <span class="text-xs" style="color: #64748b">所有交易由AI自主执行，点击查看「决策过程」了解完整的AI分析与决策逻辑</span>
+        <span class="text-xs" style="color: #64748b">持仓数据实时同步，现价来自腾讯财经实时行情</span>
       </div>
     </div>
 
-    <!-- 历史交易（占位） -->
-    <div v-else class="rounded-xl p-10 text-center" style="background: #fff; border: 1px solid #e2e8f0">
-      <i class="ri-history-line text-3xl" style="color: #cbd5e1"></i>
-      <p class="text-sm mt-3" style="color: #94a3b8">暂无历史交易记录</p>
+    <!-- 历史交易 -->
+    <div v-else class="rounded-xl overflow-hidden" style="background: #fff; border: 1px solid #e2e8f0">
+      <div v-if="tradeHistory.length" class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr style="border-bottom: 1px solid #f1f5f9; background: #fafbfc">
+              <th class="text-left px-4 py-3.5 text-xs font-medium whitespace-nowrap" style="color: #94a3b8">时间</th>
+              <th class="text-left px-4 py-3.5 text-xs font-medium whitespace-nowrap" style="color: #94a3b8">股票</th>
+              <th class="text-left px-4 py-3.5 text-xs font-medium whitespace-nowrap" style="color: #94a3b8">方向</th>
+              <th class="text-left px-4 py-3.5 text-xs font-medium whitespace-nowrap" style="color: #94a3b8">数量</th>
+              <th class="text-left px-4 py-3.5 text-xs font-medium whitespace-nowrap" style="color: #94a3b8">价格</th>
+              <th class="text-left px-4 py-3.5 text-xs font-medium whitespace-nowrap" style="color: #94a3b8">金额</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="t in tradeHistory" :key="t.id" class="hover:bg-gray-50 transition-colors" style="border-bottom: 1px solid #f8fafc">
+              <td class="px-4 py-3 text-xs whitespace-nowrap" style="color: #94a3b8">{{ fmtHistory(t) }}</td>
+              <td class="px-4 py-3">
+                <div class="font-semibold text-xs" style="color: #0f172a">{{ t.name }}</div>
+                <div class="text-xs" style="color: #94a3b8">{{ t.code }}</div>
+              </td>
+              <td class="px-4 py-3">
+                <span
+                  class="px-2.5 py-1 rounded-full text-xs font-bold"
+                  :style="{
+                    background: t.action === 'buy' ? 'rgba(22,163,74,0.08)' : 'rgba(220,38,38,0.08)',
+                    color: t.action === 'buy' ? '#16a34a' : '#dc2626',
+                    border: `1px solid ${t.action === 'buy' ? 'rgba(22,163,74,0.2)' : 'rgba(220,38,38,0.2)'}`,
+                  }"
+                >{{ t.action === 'buy' ? '买入' : '卖出' }}</span>
+              </td>
+              <td class="px-4 py-3 text-xs" style="color: #334155">{{ t.qty.toLocaleString() }} 股</td>
+              <td class="px-4 py-3 text-xs" style="color: #334155">¥{{ t.price }}</td>
+              <td class="px-4 py-3 text-xs font-semibold" style="color: #334155">¥{{ fmt(t.amount) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div v-else class="p-10 text-center">
+        <i class="ri-history-line text-3xl" style="color: #cbd5e1"></i>
+        <p class="text-sm mt-3" style="color: #94a3b8">暂无历史交易记录</p>
+      </div>
     </div>
   </div>
 </template>
