@@ -472,16 +472,59 @@
     <div class="cs-input-area"><div class="cs-input-row"><textarea placeholder="输入消息..." rows="1"></textarea><button class="send-btn" disabled><i class="ri-send-plane-fill"></i></button></div><p class="cs-hint">Enter 发送</p></div>
   </div>
 
+      <script src="api-config.js"></script>
+  <script src="data-store.js"></script>
   <script src="shared.js"></script>
   <script>
+    // 当前选中股票
+    let currentStock = { code: '920083', name: '金戈新材', price: 73.00, change: 21.67 };
+    let tradeMode = 'buy';
+
+    // 账户数据
+    const acc = DataStore.getAccount();
+    document.querySelectorAll('.fund-badge.green').forEach(el => {
+      el.innerHTML = '<i class="ri-bank-card-line"></i>可用资金 ¥' + fmt(acc.available);
+    });
+    document.querySelectorAll('.fund-badge.orange').forEach(el => {
+      el.innerHTML = '<i class="ri-bar-chart-line"></i>总资产 ¥' + fmt(acc.totalAsset);
+    });
+
+    // 自选股点击
+    document.querySelectorAll('.wl-item').forEach(item => {
+      item.addEventListener('click', () => {
+        document.querySelectorAll('.wl-item').forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+        const name = item.querySelector('.wl-name')?.textContent;
+        const code = item.querySelector('.wl-code')?.textContent;
+        const price = parseFloat(item.querySelector('.wl-price')?.textContent) || 0;
+        const change = parseFloat(item.querySelector('.wl-change')?.textContent) || 0;
+        if (name) {
+          currentStock = { code: code?.replace(/^(sh|sz|bj)/i, ''), name, price, change };
+          updateStockDisplay();
+        }
+      });
+    });
+
+    function updateStockDisplay() {
+      document.querySelector('.cp-stock-info .name').textContent = currentStock.name;
+      document.querySelector('.cp-stock-info .code').textContent = currentStock.code;
+      document.querySelector('.cp-stock-info .price').textContent = currentStock.price.toFixed(2);
+      document.querySelector('.cp-stock-info .change-tag').textContent = (currentStock.change >= 0 ? '+' : '') + currentStock.change.toFixed(2) + '%';
+      document.querySelector('.op-notice').textContent = `市价委托 · 当前 ¥${currentStock.price.toFixed(2)} 成交（仅交易时段可下单）`;
+      document.getElementById('submitBtn').textContent = (tradeMode === 'buy' ? '买入 ' : '卖出 ') + currentStock.name;
+      updateEst();
+    }
+
     function switchBuySell(btn, type) {
+      tradeMode = type;
       document.querySelectorAll('.op-bs-btn').forEach(b => { b.style.background = '#f8fafc'; b.style.color = '#94a3b8'; });
       btn.style.background = type === 'buy' ? '#dc2626' : '#16a34a';
       btn.style.color = '#fff';
       const submitBtn = document.getElementById('submitBtn');
-      submitBtn.textContent = (type === 'buy' ? '买入 ' : '卖出 ') + '金戈新材';
+      submitBtn.textContent = (type === 'buy' ? '买入 ' : '卖出 ') + currentStock.name;
       submitBtn.style.background = type === 'buy' ? 'linear-gradient(135deg, #dc2626, #b91c1c)' : 'linear-gradient(135deg, #16a34a, #15803d)';
     }
+
     function adjustQty(delta) {
       const input = document.getElementById('qtyInput');
       let val = parseInt(input.value) || 100;
@@ -489,19 +532,86 @@
       input.value = val;
       updateEst();
     }
+
     function setQty(pct) {
-      const maxQty = Math.floor(516366.97 / 73);
+      const acc = DataStore.getAccount();
+      const maxQty = Math.floor(acc.available / currentStock.price);
       const qty = Math.floor(maxQty * pct / 100 / 100) * 100;
       document.getElementById('qtyInput').value = Math.max(100, qty);
       updateEst();
     }
+
     function updateEst() {
       const qty = parseInt(document.getElementById('qtyInput').value) || 0;
-      const est = qty * 73;
+      const est = qty * currentStock.price;
       document.getElementById('estAmount').textContent = '¥' + est.toLocaleString('zh-CN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
     }
+
     document.getElementById('qtyInput').addEventListener('input', updateEst);
-    setInterval(()=>{const e=document.getElementById('headerTime');if(e)e.textContent=new Date().toLocaleTimeString('zh-CN',{hour12:false})},1000);
+
+    // 提交下单
+    document.getElementById('submitBtn').addEventListener('click', () => {
+      const btn = document.getElementById('submitBtn');
+      const qty = parseInt(document.getElementById('qtyInput').value) || 0;
+      if (qty < 100) { showToast('最少买入100股'); return; }
+
+      btn.textContent = '提交中...';
+      btn.disabled = true;
+
+      setTimeout(() => {
+        if (tradeMode === 'buy') {
+          const result = DataStore.buyStock(currentStock.code, currentStock.name, currentStock.price, qty);
+          if (result.error) {
+            showToast('买入失败: ' + result.error);
+          } else {
+            showToast(`成功买入 ${currentStock.name} ${qty}股，花费 ¥${fmt(result.amount + result.fee)}`);
+            btn.textContent = '✓ 已成交';
+            btn.style.background = 'linear-gradient(135deg, #16a34a, #15803d)';
+          }
+        } else {
+          const result = DataStore.removePosition(currentStock.code, qty);
+          if (!result) {
+            showToast('卖出失败: 无该股持仓');
+          } else {
+            showToast(`成功卖出 ${currentStock.name}，盈亏 ¥${fmt(result.pnl)}`);
+            btn.textContent = '✓ 已成交';
+          }
+        }
+        // 刷新资金显示
+        const newAcc = DataStore.getAccount();
+        document.querySelectorAll('.fund-badge.green').forEach(el => {
+          el.innerHTML = '<i class="ri-bank-card-line"></i>可用资金 ¥' + fmt(newAcc.available);
+        });
+        document.querySelectorAll('.fund-badge.orange').forEach(el => {
+          el.innerHTML = '<i class="ri-bar-chart-line"></i>总资产 ¥' + fmt(newAcc.totalAsset);
+        });
+        setTimeout(() => {
+          btn.textContent = (tradeMode === 'buy' ? '买入 ' : '卖出 ') + currentStock.name;
+          btn.style.background = tradeMode === 'buy' ? 'linear-gradient(135deg, #dc2626, #b91c1c)' : 'linear-gradient(135deg, #16a34a, #15803d)';
+          btn.disabled = false;
+        }, 1500);
+      }, 800);
+    });
+
+    // AI 审核按钮
+    document.querySelector('.ai-review-btn')?.addEventListener('click', async () => {
+      const btn = document.querySelector('.ai-review-btn');
+      const qty = parseInt(document.getElementById('qtyInput').value) || 0;
+      btn.innerHTML = '<i class="ri-loader-4-line" style="animation:spin 1s linear infinite"></i> AI 分析中...';
+
+      const prompt = `请帮我审核这笔交易：${tradeMode === 'buy' ? '买入' : '卖出'} ${currentStock.name}(${currentStock.code}) ${qty}股，当前价格 ¥${currentStock.price}。请从风险、时机、仓位角度给出建议，50字内。`;
+      const reply = await callAI([
+        { role: 'system', content: AI_SYSTEM_PROMPTS.trader },
+        { role: 'user', content: prompt }
+      ], { max_tokens: 200 });
+
+      btn.innerHTML = '<i class="ri-brain-line"></i> ' + reply;
+      setTimeout(() => {
+        btn.innerHTML = '<i class="ri-brain-line"></i> 让 AI 帮我审一下这笔（约 3-10 秒）';
+      }, 8000);
+    });
+
+    updateEst();
   </script>
 </body>
 </html>

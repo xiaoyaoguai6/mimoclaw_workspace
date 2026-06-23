@@ -483,15 +483,93 @@
     <div class="cs-input-area"><div class="cs-input-row"><textarea placeholder="输入消息..." rows="1"></textarea><button class="send-btn" disabled><i class="ri-send-plane-fill"></i></button></div><p class="cs-hint">Enter 发送</p></div>
   </div>
 
+      <script src="api-config.js"></script>
+  <script src="data-store.js"></script>
   <script src="shared.js"></script>
   <script>
+    // 持仓数据联动
+    (function() {
+      const acc = DataStore.getAccount();
+
+      // 更新汇总统计
+      const stats = document.querySelectorAll('.summary-stat .value');
+      if (stats[1]) stats[1].textContent = fmtPct(acc.totalPnlPct || 0);
+      if (stats[2]) { stats[2].textContent = (acc.totalPnl >= 0 ? '+' : '') + '¥' + fmt(acc.totalPnl, 0); stats[2].className = 'value ' + (acc.totalPnl >= 0 ? 'up' : 'down'); }
+
+      // 更新持仓表格
+      const tbody = document.querySelector('.positions-table tbody');
+      if (tbody && acc.positions.length > 0) {
+        tbody.innerHTML = acc.positions.map(p => {
+          const pnl = (p.currentPrice - p.avgCost) * p.qty;
+          const pnlPct = ((p.currentPrice - p.avgCost) / p.avgCost * 100);
+          const value = p.qty * p.currentPrice;
+          const colorClass = pnl >= 0 ? 'pnl-up' : 'pnl-down';
+          return `<tr>
+            <td class="stock-cell"><div class="name">${p.name}</div><div class="stock-code">${p.code}</div></td>
+            <td>${p.qty.toLocaleString()}股</td>
+            <td>¥${p.avgCost.toFixed(2)}</td>
+            <td>¥${p.currentPrice.toFixed(2)}</td>
+            <td class="${colorClass}">${pnl >= 0 ? '+' : ''}¥${fmt(pnl)}</td>
+            <td class="${colorClass}">${fmtPct(pnlPct)}</td>
+            <td>¥${fmt(value)}</td>
+            <td><button class="action-btn sell-btn-mini" data-code="${p.code}">卖出</button></td>
+          </tr>`;
+        }).join('');
+
+        // 重新绑定卖出按钮
+        document.querySelectorAll('.sell-btn-mini').forEach(btn => {
+          btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const code = this.dataset.code;
+            this.textContent = '确认中...';
+            this.disabled = true;
+            setTimeout(() => {
+              const result = DataStore.removePosition(code, 999999);
+              if (result) {
+                showToast(`卖出成功，盈亏 ¥${fmt(result.pnl)}`);
+                this.textContent = '已卖出';
+                this.style.background = 'rgba(22,163,74,0.1)';
+                this.style.color = '#16a34a';
+                this.style.borderColor = 'rgba(22,163,74,0.3)';
+              }
+            }, 500);
+          });
+        });
+      } else if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="8" class="empty-state"><i class="ri-inbox-line"></i>暂无持仓，等待 AI 建仓决策</td></tr>';
+      }
+
+      // 更新历史交易
+      const histTbody = document.querySelector('#tab-history tbody');
+      if (histTbody && acc.tradeHistory.length > 0) {
+        histTbody.innerHTML = acc.tradeHistory.slice(0, 20).map(t => {
+          const dirClass = t.direction === 'buy' ? 'type-buy' : 'type-sell';
+          const dirText = t.direction === 'buy' ? '买入' : '卖出';
+          const pnlText = t.pnl != null ? (t.pnl >= 0 ? `<span style="color:#dc2626;font-weight:600;">+¥${fmt(t.pnl)}</span>` : `<span style="color:#16a34a;font-weight:600;">-¥${fmt(Math.abs(t.pnl))}</span>`) : '—';
+          return `<tr>
+            <td>${t.date}</td>
+            <td><div style="font-weight:600;">${t.name}</div><div style="font-size:0.6875rem;color:#94a3b8;">${t.code}</div></td>
+            <td class="${dirClass}">${dirText}</td>
+            <td>${t.qty}股</td>
+            <td>¥${t.price.toFixed(2)}</td>
+            <td>¥${fmt(t.amount)}</td>
+            <td>${pnlText}</td>
+            <td><span style="color:#16a34a;">已成交</span></td>
+          </tr>`;
+        }).join('');
+      }
+
+      // 更新侧边栏
+      const statusPnl = document.querySelector('.ai-status-card .status-pnl');
+      if (statusPnl) statusPnl.textContent = `浮盈 ${acc.totalPnl >= 0 ? '+' : ''}¥${fmt(acc.totalPnl, 0)}`;
+    })();
+
     function switchTab(btn, tab) {
       document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
       btn.classList.add('active');
       document.getElementById('tab-current').style.display = tab === 'current' ? '' : 'none';
       document.getElementById('tab-history').style.display = tab === 'history' ? '' : 'none';
     }
-    setInterval(()=>{const e=document.getElementById('headerTime');if(e)e.textContent=new Date().toLocaleTimeString('zh-CN',{hour12:false})},1000);
   </script>
 </body>
 </html>

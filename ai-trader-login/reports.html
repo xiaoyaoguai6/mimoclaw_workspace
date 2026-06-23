@@ -231,20 +231,33 @@
   <div class="ai-chat-dialog"><div class="ai-chat-header"><div class="left"><div class="icon"><i class="ri-robot-2-line"></i></div><div class="info"><div class="name">AI 交易员</div><div class="status"><span class="dot"></span>在线</div></div></div><div class="actions"><button class="ai-chat-pause"><i class="ri-pause-line"></i></button><button class="ai-chat-close"><i class="ri-close-line"></i></button></div></div><div class="ai-chat-quick"><button class="quick-question">今日买了什么</button><button class="quick-question">当前仓位怎样</button><button class="quick-question">最新决策原因</button><button class="quick-question">明日策略</button></div><div class="ai-chat-messages"><div class="ai-msg bot"><div class="ai-msg-avatar"><i class="ri-robot-2-line"></i></div><div class="ai-msg-bubble">你好！我是 AI 交易员，有什么可以帮你的？</div></div></div><div class="ai-chat-input"><div class="input-row"><textarea placeholder="输入消息..." rows="1"></textarea><button class="ai-send-btn"><i class="ri-send-plane-fill"></i></button></div></div></div>
   <div class="customer-service"><div class="cs-header"><div class="info"><div class="cs-icon"><i class="ri-customer-service-2-line"></i></div><div><div class="cs-name">在线客服</div><div class="cs-status"><span class="dot"></span><span>在线</span></div></div></div><button class="minimize-btn cs-minimize"><i class="ri-subtract-line"></i></button></div><div class="cs-messages"><div class="cs-msg user"><div><div class="bubble">收费标准是什么？</div><div class="time">21:11</div></div></div><div class="cs-msg bot"><div class="bot-avatar"><i class="ri-customer-service-2-line"></i></div><div><div class="bubble">1:年付9886元<br>2:半年6886元<br>3:季度4886元<br>4:月付2886元</div><div class="time">09:03</div></div></div></div><div class="cs-input-area"><div class="cs-input-row"><textarea placeholder="输入消息..." rows="1"></textarea><button class="send-btn" disabled><i class="ri-send-plane-fill"></i></button></div><p class="cs-hint">Enter 发送</p></div></div>
 
+  <script src="api-config.js"></script>
+  <script src="data-store.js"></script>
   <script src="shared.js"></script>
   <script>
-    document.querySelectorAll('.period-tab').forEach(tab => {
-      tab.addEventListener('click', () => {
-        tab.parentElement.querySelectorAll('.period-tab').forEach(t => t.classList.remove('active'));
-        tab.classList.add('active');
-      });
-    });
-    const exportBtn = document.querySelector('.export-btn');
-    if (exportBtn) exportBtn.addEventListener('click', () => {
-      exportBtn.innerHTML = '<i class="ri-loader-4-line" style="animation:spin 1s linear infinite"></i> 生成中...';
-      setTimeout(() => { exportBtn.innerHTML = '<i class="ri-check-line"></i> 已就绪'; setTimeout(() => { exportBtn.innerHTML = '<i class="ri-download-cloud-line"></i> 导出PDF'; }, 2000); }, 1500);
-    });
-    setInterval(()=>{const e=document.getElementById('headerTime');if(e)e.textContent=new Date().toLocaleTimeString('zh-CN',{hour12:false})},1000);
+    // 报表数据联动
+    (function() {
+      const report = DataStore.getReportData();
+
+      // 更新累计收益率
+      const bigPct = document.querySelector('.sc-value');
+      if (bigPct) { bigPct.textContent = fmtPct(report.totalPnlPct || 0); bigPct.style.color = (report.totalPnlPct || 0) >= 0 ? '#dc2626' : '#16a34a'; }
+
+      // 更新资产净值
+      const netVal = document.querySelector('.sc-footer .fv');
+      if (netVal) netVal.textContent = fmtMoney(report.totalAsset);
+
+      // 更新统计卡片
+      const statCards = document.querySelectorAll('.stat-card');
+      if (statCards[0]) statCards[0].querySelector('.st-value').textContent = report.totalTrades + '笔';
+      if (statCards[1]) statCards[1].querySelector('.st-value').textContent = report.sellTrades > 0 ? report.winRate + '%' : '暂无平仓';
+      if (statCards[2]) statCards[2].querySelector('.st-value').textContent = report.totalPnl !== 0 ? fmtMoney(report.totalPnl) : '-';
+      if (statCards[2]) statCards[2].querySelector('.st-value').style.color = report.totalPnl >= 0 ? '#dc2626' : '#16a34a';
+
+      // 更新侧边栏
+      const statusPnl = document.querySelector('.ai-status-card .status-pnl');
+      if (statusPnl) statusPnl.textContent = `浮盈 ${report.totalPnl >= 0 ? '+' : ''}¥${fmt(report.totalPnl, 0)}`;
+    })();
   </script>
 </body>
 </html>

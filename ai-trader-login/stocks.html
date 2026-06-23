@@ -319,7 +319,67 @@
     <div class="cs-input-area"><div class="cs-input-row"><textarea placeholder="输入消息..." rows="1"></textarea><button class="send-btn" disabled><i class="ri-send-plane-fill"></i></button></div><p class="cs-hint">Enter 发送</p></div>
   </div>
 
+      <script src="api-config.js"></script>
+  <script src="data-store.js"></script>
   <script src="shared.js"></script>
-  <script>setInterval(()=>{const e=document.getElementById('headerTime');if(e)e.textContent=new Date().toLocaleTimeString('zh-CN',{hour12:false})},1000)</script>
+  <script>
+    // 4位分析师接入 API
+    const analystEmoji = { fundamental: '💼', quant: '📈', capital: '📡', industry: '📰' };
+    const analystNames = { fundamental: '财报研究员', quant: '量化交易员', capital: '资金分析师', industry: '行业研究员' };
+
+    // 点击自选股时触发分析
+    document.querySelectorAll('.wl-item, .stock-item').forEach(item => {
+      item.addEventListener('click', async () => {
+        const name = item.querySelector('.wl-name, .si-name')?.textContent;
+        const code = item.querySelector('.wl-code, .si-code')?.textContent;
+        if (!name) return;
+
+        // 更新选中状态
+        document.querySelectorAll('.wl-item, .stock-item').forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+
+        // 分析中状态
+        document.querySelectorAll('.analyst-item .verdict').forEach(v => v.textContent = '分析中...');
+
+        // 并行调用4位分析师
+        const analysts = Object.entries(AI_SYSTEM_PROMPTS.analysts);
+        const promises = analysts.map(([key, prompt]) =>
+          callAI([
+            { role: 'system', content: prompt },
+            { role: 'user', content: `分析 ${name}(${code})，当前市场环境下给出你的专业判断。50字内。` }
+          ], { max_tokens: 150 })
+        );
+
+        const results = await Promise.all(promises);
+        document.querySelectorAll('.analyst-item .verdict').forEach((v, i) => {
+          v.textContent = results[i] || '—';
+          v.style.color = '#334155';
+        });
+      });
+    });
+
+    // 初始加载时自动分析第一个股票
+    (async function() {
+      const first = document.querySelector('.wl-item.active, .stock-item.active');
+      if (first) {
+        const name = first.querySelector('.wl-name, .si-name')?.textContent;
+        const code = first.querySelector('.wl-code, .si-code')?.textContent;
+        if (name && code) {
+          const analysts = Object.entries(AI_SYSTEM_PROMPTS.analysts);
+          const promises = analysts.map(([key, prompt]) =>
+            callAI([
+              { role: 'system', content: prompt },
+              { role: 'user', content: `分析 ${name}(${code})。50字内。` }
+            ], { max_tokens: 150 })
+          );
+          const results = await Promise.all(promises);
+          document.querySelectorAll('.analyst-item .verdict').forEach((v, i) => {
+            v.textContent = results[i] || '—';
+            v.style.color = '#334155';
+          });
+        }
+      }
+    })();
+  </script>
 </body>
 </html>

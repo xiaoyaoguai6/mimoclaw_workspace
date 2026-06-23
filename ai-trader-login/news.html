@@ -178,6 +178,8 @@
       <p class="cs-hint">Enter 发送</p>
     </div>
   </div>
+  <script src="api-config.js"></script>
+  <script src="data-store.js"></script>
   <script src="shared.js"></script>
   <script>
     const newsData = [
@@ -210,6 +212,26 @@
           </div>
         </div>`;
     });
+    // 新闻点击分析
+    document.querySelectorAll('.news-item').forEach((item, i) => {
+      item.addEventListener('click', async () => {
+        const title = item.querySelector('.news-title')?.textContent;
+        if (!title) return;
+        const impactEl = item.querySelector('.news-impact');
+        if (!impactEl) return;
+        impactEl.textContent = 'AI 分析中...';
+        impactEl.style.color = '#d97706';
+
+        const reply = await callAI([
+          { role: 'system', content: '你是A股新闻分析师。分析新闻对A股的影响，给出影响板块和程度。50字内。' },
+          { role: 'user', content: title }
+        ], { max_tokens: 150 });
+
+        impactEl.textContent = reply;
+        impactEl.style.color = '#64748b';
+      });
+    });
+
     setInterval(() => {
       const el = document.getElementById('headerTime');
       if (el) el.textContent = new Date().toLocaleTimeString('zh-CN', { hour12: false });

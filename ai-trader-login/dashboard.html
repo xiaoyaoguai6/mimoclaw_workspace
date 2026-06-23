@@ -546,9 +546,39 @@
     <div class="cs-input-area"><div class="cs-input-row"><textarea placeholder="输入消息..." rows="1"></textarea><button class="send-btn" disabled><i class="ri-send-plane-fill"></i></button></div><p class="cs-hint">Enter 发送</p></div>
   </div>
 
+  <script src="api-config.js"></script>
+  <script src="data-store.js"></script>
   <script src="shared.js"></script>
   <script>
-    setInterval(()=>{const e=document.getElementById('headerTime');if(e)e.textContent=new Date().toLocaleTimeString('zh-CN',{hour12:false})},1000);
+    // Dashboard 数据联动
+    (function() {
+      const acc = DataStore.getAccount();
+      // 更新 KPI
+      const kpiEls = document.querySelectorAll('.kpi-value');
+      if (kpiEls[0]) kpiEls[0].textContent = fmtMoney(acc.totalAsset);
+      if (kpiEls[1]) { kpiEls[1].textContent = (acc.totalPnl >= 0 ? '+' : '') + fmtMoney(acc.totalPnl); kpiEls[1].style.color = acc.totalPnl >= 0 ? '#dc2626' : '#16a34a'; }
+      if (kpiEls[3]) { kpiEls[3].textContent = (acc.totalPnl >= 0 ? '+' : '') + fmtMoney(acc.totalPnl); kpiEls[3].style.color = acc.totalPnl >= 0 ? '#dc2626' : '#16a34a'; }
+      if (kpiEls[4]) kpiEls[4].textContent = acc.posCount + ' 只';
+
+      // 更新持仓快照表
+      const tbody = document.querySelector('.holdings-table tbody');
+      if (tbody && acc.positions.length > 0) {
+        tbody.innerHTML = acc.positions.map(p => {
+          const pnl = (p.currentPrice - p.avgCost) * p.qty;
+          const pnlPct = ((p.currentPrice - p.avgCost) / p.avgCost * 100);
+          const value = p.qty * p.currentPrice;
+          const pctOfTotal = acc.totalAsset > 0 ? (value / acc.totalAsset * 100) : 0;
+          const color = pnl >= 0 ? '#dc2626' : '#16a34a';
+          return `<tr><td><div style="font-weight:600;color:#0f172a;">${p.name}</div><div style="color:#94a3b8;">${p.code}</div></td>` +
+            `<td style="text-align:right;"><div style="color:${color};">${pnl >= 0 ? '+' : ''}${(pnl/10000).toFixed(2)}万</div><div style="color:${color};">${fmtPct(pnlPct)}</div></td>` +
+            `<td style="text-align:right;"><div style="display:flex;align-items:center;justify-content:flex-end;gap:0.5rem;"><div class="holdings-bar"><div class="fill" style="width:${Math.min(pctOfTotal, 100)}%;"></div></div><span style="color:#64748b;">${pctOfTotal.toFixed(0)}%</span></div></td></tr>`;
+        }).join('');
+      }
+
+      // 更新侧边栏 AI 状态
+      const statusPnl = document.querySelector('.ai-status-card .status-pnl');
+      if (statusPnl) statusPnl.textContent = `浮盈 ${acc.totalPnl >= 0 ? '+' : ''}¥${fmt(acc.totalPnl, 0)}`;
+    })();
   </script>
 </body>
 </html>
