@@ -77,94 +77,151 @@ async function executeOrder() {
 </script>
 
 <template>
-  <div>
+  <div class="animate-fade-in">
     <RiskBanner />
-    <el-row :gutter="20">
-      <el-col :span="12">
-        <el-card>
-          <template #header><span class="font-bold">模拟交易下单</span></template>
-          <el-input
-            v-model="stockCode"
-            placeholder="输入6位股票代码（如 600519）"
-            prefix-icon="ri-search-line"
-            class="mb-2"
-            :loading="searching"
-          />
-          <div v-if="stockInfo" class="mb-4 p-3 rounded-lg" style="background: #f8fafc; border: 1px solid #f1f5f9">
-            <div class="flex items-center justify-between">
-              <div>
-                <span class="font-bold text-sm">{{ stockInfo.name }}</span>
-                <span class="text-xs ml-2" style="color: #94a3b8">{{ stockCode }}</span>
-              </div>
-              <div class="text-right">
-                <div class="text-lg font-bold" :style="{ color: stockInfo.change_pct >= 0 ? '#dc2626' : '#16a34a' }">
-                  ¥{{ stockInfo.price }}
-                </div>
-                <div class="text-xs" :style="{ color: stockInfo.change_pct >= 0 ? '#dc2626' : '#16a34a' }">
-                  {{ stockInfo.change_pct >= 0 ? '+' : '' }}{{ stockInfo.change_pct }}%
-                </div>
-              </div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <!-- 下单面板 -->
+      <div class="card p-6">
+        <div class="flex items-center gap-2 mb-5">
+          <i class="ri-swap-line text-lg" style="color: var(--color-primary)"></i>
+          <h3 class="text-base font-bold" style="color: var(--color-text-primary)">模拟交易下单</h3>
+        </div>
+
+        <el-input
+          v-model="stockCode"
+          placeholder="输入6位股票代码（如 600519）"
+          prefix-icon="ri-search-line"
+          class="mb-4"
+          :loading="searching"
+        />
+
+        <!-- 股票信息卡片 -->
+        <div v-if="stockInfo" class="mb-5 p-4 rounded-xl" style="background: var(--color-border-light); border: 1px solid var(--color-border)">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <span class="font-bold text-base" style="color: var(--color-text-primary)">{{ stockInfo.name }}</span>
+              <span class="text-xs ml-2 font-mono" style="color: var(--color-text-muted)">{{ stockCode }}</span>
             </div>
-            <div class="grid grid-cols-4 gap-2 mt-2 text-xs" style="color: #64748b">
-              <div>PE <strong>{{ stockInfo.pe_ttm }}</strong></div>
-              <div>PB <strong>{{ stockInfo.pb }}</strong></div>
-              <div>市值 <strong>{{ stockInfo.mcap_yi }}亿</strong></div>
-              <div>换手 <strong>{{ stockInfo.turnover_pct }}%</strong></div>
-            </div>
-          </div>
-          <el-radio-group v-model="tradeType" class="mb-4 w-full">
-            <el-radio-button value="buy" class="flex-1">买入</el-radio-button>
-            <el-radio-button value="sell" class="flex-1">卖出</el-radio-button>
-          </el-radio-group>
-          <el-form label-width="60px">
-            <el-form-item label="价格"><el-input v-model="price" placeholder="价格" /></el-form-item>
-            <el-form-item label="数量"><el-input v-model="qty" placeholder="输入股数" /></el-form-item>
-          </el-form>
-          <div class="flex gap-2 mb-4">
-            <el-button v-for="s in shortcuts" :key="s" size="small" @click="setQty(s)">{{ s }}</el-button>
-          </div>
-          <div class="flex justify-between text-xs text-gray-400 mb-4">
-            <span>预估金额：<strong class="text-gray-800">¥{{ estAmount }}</strong></span>
-            <span>可用资金：<strong class="text-gray-800">¥{{ fmt(store.account.available_cash) }}</strong></span>
-          </div>
-          <el-button
-            :type="tradeType === 'buy' ? 'danger' : 'success'"
-            class="w-full"
-            size="large"
-            :loading="trading"
-            @click="executeOrder"
-          >{{ tradeType === 'buy' ? '买入' : '卖出' }}</el-button>
-        </el-card>
-      </el-col>
-      <el-col :span="12">
-        <el-card>
-          <template #header><span class="font-bold">持仓明细</span></template>
-          <div v-if="store.holdings.length" class="space-y-2">
-            <div
-              v-for="h in store.holdings"
-              :key="h.code"
-              class="flex items-center justify-between p-3 rounded-lg cursor-pointer hover:bg-gray-50 transition-all"
-              style="background: #f8fafc; border: 1px solid #f1f5f9"
-              @click="stockCode = h.code"
-            >
-              <div>
-                <div class="font-semibold text-sm">{{ h.name }}</div>
-                <div class="text-xs" style="color: #94a3b8">{{ h.code }} · {{ h.qty }}股</div>
+            <div class="text-right">
+              <div class="text-xl font-bold tabular-nums" :style="{ color: stockInfo.change_pct >= 0 ? 'var(--color-up)' : 'var(--color-down)' }">
+                ¥{{ stockInfo.price }}
               </div>
-              <div class="text-right">
-                <div class="text-sm font-bold">¥{{ h.current_price }}</div>
-                <div class="text-xs" :style="{ color: h.pnl >= 0 ? '#dc2626' : '#16a34a' }">
-                  {{ h.pnl >= 0 ? '+' : '' }}{{ h.pnl_pct }}%
-                </div>
+              <div class="text-xs tabular-nums" :style="{ color: stockInfo.change_pct >= 0 ? 'var(--color-up)' : 'var(--color-down)' }">
+                {{ stockInfo.change_pct >= 0 ? '+' : '' }}{{ stockInfo.change_pct }}%
               </div>
             </div>
           </div>
-          <div v-else class="text-center py-8">
-            <i class="ri-inbox-line text-2xl" style="color: #cbd5e1"></i>
-            <p class="text-sm mt-2" style="color: #94a3b8">暂无持仓</p>
+          <div class="grid grid-cols-4 gap-3 pt-3" style="border-top: 1px solid var(--color-border)">
+            <div>
+              <p class="text-xs" style="color: var(--color-text-muted)">PE(TTM)</p>
+              <p class="text-sm font-bold mt-0.5 tabular-nums" style="color: var(--color-text-primary)">{{ stockInfo.pe_ttm }}</p>
+            </div>
+            <div>
+              <p class="text-xs" style="color: var(--color-text-muted)">PB</p>
+              <p class="text-sm font-bold mt-0.5 tabular-nums" style="color: var(--color-text-primary)">{{ stockInfo.pb }}</p>
+            </div>
+            <div>
+              <p class="text-xs" style="color: var(--color-text-muted)">市值</p>
+              <p class="text-sm font-bold mt-0.5 tabular-nums" style="color: var(--color-text-primary)">{{ stockInfo.mcap_yi }}亿</p>
+            </div>
+            <div>
+              <p class="text-xs" style="color: var(--color-text-muted)">换手</p>
+              <p class="text-sm font-bold mt-0.5 tabular-nums" style="color: var(--color-text-primary)">{{ stockInfo.turnover_pct }}%</p>
+            </div>
           </div>
-        </el-card>
-      </el-col>
-    </el-row>
+        </div>
+
+        <!-- 买卖切换 -->
+        <div class="grid grid-cols-2 gap-2 mb-5">
+          <button
+            class="py-3 rounded-xl text-sm font-bold cursor-pointer transition-all"
+            :style="tradeType === 'buy'
+              ? { background: 'var(--color-up)', color: '#fff', boxShadow: '0 4px 12px rgba(239,68,68,0.25)' }
+              : { background: 'var(--color-border-light)', color: 'var(--color-text-muted)', border: '1px solid var(--color-border)' }"
+            @click="tradeType = 'buy'"
+          >买入</button>
+          <button
+            class="py-3 rounded-xl text-sm font-bold cursor-pointer transition-all"
+            :style="tradeType === 'sell'
+              ? { background: 'var(--color-down)', color: '#fff', boxShadow: '0 4px 12px rgba(16,185,129,0.25)' }
+              : { background: 'var(--color-border-light)', color: 'var(--color-text-muted)', border: '1px solid var(--color-border)' }"
+            @click="tradeType = 'sell'"
+          >卖出</button>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 mb-5">
+          <div>
+            <label class="text-xs font-medium mb-2 block" style="color: var(--color-text-secondary)">价格</label>
+            <el-input v-model="price" placeholder="价格" />
+          </div>
+          <div>
+            <label class="text-xs font-medium mb-2 block" style="color: var(--color-text-secondary)">数量</label>
+            <el-input v-model="qty" placeholder="输入股数" />
+          </div>
+        </div>
+
+        <div class="flex gap-2 mb-5">
+          <button
+            v-for="s in shortcuts"
+            :key="s"
+            class="px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-all"
+            style="background: var(--color-border-light); color: var(--color-text-secondary)"
+            @click="setQty(s)"
+          >{{ s }}</button>
+        </div>
+
+        <div class="flex justify-between text-xs mb-5 pb-4" style="color: var(--color-text-muted); border-bottom: 1px solid var(--color-border-light)">
+          <span>预估金额：<strong class="text-sm tabular-nums" style="color: var(--color-text-primary)">¥{{ estAmount }}</strong></span>
+          <span>可用资金：<strong class="text-sm tabular-nums" style="color: var(--color-text-primary)">¥{{ fmt(store.account.available_cash) }}</strong></span>
+        </div>
+
+        <button
+          class="w-full py-4 rounded-xl font-bold text-base cursor-pointer transition-all hover:shadow-lg"
+          :style="tradeType === 'buy'
+            ? { background: 'var(--color-up)', color: '#fff' }
+            : { background: 'var(--color-down)', color: '#fff' }"
+          :disabled="trading"
+          @click="executeOrder"
+        >
+          <i :class="trading ? 'ri-loader-4-line animate-spin' : 'ri-check-line'" class="mr-2"></i>
+          {{ trading ? '处理中…' : (tradeType === 'buy' ? '确认买入' : '确认卖出') }}
+        </button>
+      </div>
+
+      <!-- 持仓明细 -->
+      <div class="card p-6">
+        <div class="flex items-center gap-2 mb-5">
+          <i class="ri-briefcase-line text-lg" style="color: var(--color-primary)"></i>
+          <h3 class="text-base font-bold" style="color: var(--color-text-primary)">持仓明细</h3>
+          <span class="badge ml-auto" style="background: var(--color-primary-light); color: var(--color-primary)">{{ store.holdings.length }} 只</span>
+        </div>
+        <div v-if="store.holdings.length" class="space-y-3">
+          <div
+            v-for="h in store.holdings"
+            :key="h.code"
+            class="flex items-center justify-between p-4 rounded-xl cursor-pointer transition-all hover:shadow-md"
+            style="background: var(--color-border-light); border: 1px solid var(--color-border)"
+            @click="stockCode = h.code"
+          >
+            <div>
+              <div class="font-semibold text-sm" style="color: var(--color-text-primary)">{{ h.name }}</div>
+              <div class="text-xs mt-0.5" style="color: var(--color-text-muted)">{{ h.code }} · {{ h.qty.toLocaleString() }}股</div>
+            </div>
+            <div class="text-right">
+              <div class="text-base font-bold tabular-nums" style="color: var(--color-text-primary)">¥{{ h.current_price }}</div>
+              <div class="text-xs tabular-nums" :style="{ color: h.pnl >= 0 ? 'var(--color-up)' : 'var(--color-down)' }">
+                {{ h.pnl >= 0 ? '+' : '' }}{{ h.pnl_pct }}%
+              </div>
+            </div>
+          </div>
+        </div>
+        <div v-else class="py-16 text-center">
+          <div class="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style="background: var(--color-border-light)">
+            <i class="ri-inbox-line text-3xl" style="color: var(--color-text-faint)"></i>
+          </div>
+          <p class="text-sm" style="color: var(--color-text-muted)">暂无持仓</p>
+        </div>
+      </div>
+    </div>
   </div>
 </template>

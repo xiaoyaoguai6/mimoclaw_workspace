@@ -30,105 +30,144 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="space-y-5">
+  <div class="space-y-6 animate-fade-in">
     <!-- 市场状态 -->
-    <div class="rounded-xl p-4" :style="{
-      background: store.marketStatus.isOpen ? 'rgba(34,197,94,0.06)' : 'rgba(245,166,35,0.06)',
-      border: `1px solid ${store.marketStatus.isOpen ? 'rgba(34,197,94,0.2)' : 'rgba(245,166,35,0.2)'}`,
+    <div class="rounded-2xl p-5 card" :style="{
+      background: store.marketStatus.isOpen ? 'var(--color-success-light)' : 'var(--color-warning-light)',
+      border: `1px solid ${store.marketStatus.isOpen ? 'rgba(16,185,129,0.2)' : 'rgba(245,158,11,0.2)'}`,
     }">
-      <div class="text-sm font-bold mb-1" :style="{ color: store.marketStatus.isOpen ? '#166534' : '#92400e' }">
-        {{ store.marketStatus.label }}（{{ store.marketStatus.dateLabel }}）
-      </div>
-      <div class="text-xs" :style="{ color: store.marketStatus.isOpen ? '#166534' : '#92400e', opacity: 0.7 }">
-        {{ store.marketStatus.statusLabel }}
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center" :style="{ background: store.marketStatus.isOpen ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)' }">
+          <i :class="store.marketStatus.isOpen ? 'ri-radio-button-line' : 'ri-pause-circle-line'" class="text-lg" :style="{ color: store.marketStatus.isOpen ? 'var(--color-success)' : 'var(--color-warning)' }"></i>
+        </div>
+        <div>
+          <div class="text-sm font-bold" :style="{ color: store.marketStatus.isOpen ? 'var(--color-success)' : 'var(--color-warning)' }">
+            {{ store.marketStatus.label }}
+          </div>
+          <div class="text-xs mt-0.5" :style="{ color: store.marketStatus.isOpen ? 'var(--color-success)' : 'var(--color-warning)', opacity: 0.7 }">
+            {{ store.marketStatus.dateLabel }} · {{ store.marketStatus.statusLabel }}
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- 指数行情 -->
-    <el-card>
-      <template #header>
-        <span class="font-bold">📈 实时指数行情</span>
-      </template>
-      <el-row :gutter="24">
-        <el-col :span="8">
-          <div class="text-xs font-semibold mb-2" style="color: #64748b">国内</div>
-          <div v-for="idx in store.marketIndices" :key="idx.code" class="text-xs flex justify-between py-1">
-            <span>{{ idx.name }}</span>
-            <span :style="{ color: idx.direction === 'up' ? '#dc2626' : '#16a34a' }">
-              {{ idx.value }} ({{ idx.change }})
-            </span>
+    <!-- 指数行情卡片 -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      <div class="card p-5">
+        <div class="flex items-center gap-2 mb-4">
+          <span class="w-2 h-2 rounded-full" style="background: var(--color-danger)"></span>
+          <span class="text-sm font-bold" style="color: var(--color-text-primary)">国内指数</span>
+        </div>
+        <div class="space-y-3">
+          <div v-for="idx in store.marketIndices" :key="idx.code" class="flex items-center justify-between py-2" style="border-bottom: 1px solid var(--color-border-light)">
+            <span class="text-sm" style="color: var(--color-text-secondary)">{{ idx.name }}</span>
+            <div class="text-right">
+              <span class="text-sm font-bold tabular-nums" style="color: var(--color-text-primary)">{{ idx.value }}</span>
+              <span class="text-xs ml-2 tabular-nums font-semibold" :style="{ color: idx.direction === 'up' ? 'var(--color-up)' : 'var(--color-down)' }">
+                {{ idx.change }}
+              </span>
+            </div>
           </div>
-        </el-col>
-        <el-col :span="8">
-          <div class="text-xs font-semibold mb-2" style="color: #64748b">美股</div>
-          <div v-for="idx in overseasIndices.us" :key="idx.code" class="text-xs flex justify-between py-1">
-            <span>{{ idx.name }}</span>
-            <span :style="{ color: idx.direction === 'up' ? '#dc2626' : '#16a34a' }">
-              {{ idx.value }} ({{ idx.change }})
-            </span>
-          </div>
-        </el-col>
-        <el-col :span="8">
-          <div class="text-xs font-semibold mb-2" style="color: #64748b">港股</div>
-          <div v-for="idx in overseasIndices.hk" :key="idx.code" class="text-xs flex justify-between py-1">
-            <span>{{ idx.name }}</span>
-            <span :style="{ color: idx.direction === 'up' ? '#dc2626' : '#16a34a' }">
-              {{ idx.value }} ({{ idx.change }})
-            </span>
-          </div>
-        </el-col>
-      </el-row>
-    </el-card>
-
-    <!-- 行业板块排名 -->
-    <div class="rounded-xl p-5" style="background: #fff; border: 1px solid #e2e8f0">
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="text-sm font-semibold" style="color: #0f172a">行业板块涨跌排名</h3>
-        <span class="text-xs" style="color: #94a3b8">共 {{ industryRanking.total }} 个行业</span>
+        </div>
       </div>
 
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <!-- 涨幅前15 -->
+      <div class="card p-5">
+        <div class="flex items-center gap-2 mb-4">
+          <span class="w-2 h-2 rounded-full" style="background: #3b82f6"></span>
+          <span class="text-sm font-bold" style="color: var(--color-text-primary)">美股指数</span>
+        </div>
+        <div class="space-y-3">
+          <div v-for="idx in overseasIndices.us" :key="idx.code" class="flex items-center justify-between py-2" style="border-bottom: 1px solid var(--color-border-light)">
+            <span class="text-sm" style="color: var(--color-text-secondary)">{{ idx.name }}</span>
+            <div class="text-right">
+              <span class="text-sm font-bold tabular-nums" style="color: var(--color-text-primary)">{{ idx.value }}</span>
+              <span class="text-xs ml-2 tabular-nums font-semibold" :style="{ color: idx.direction === 'up' ? 'var(--color-up)' : 'var(--color-down)' }">
+                {{ idx.change }}
+              </span>
+            </div>
+          </div>
+          <div v-if="!overseasIndices.us.length" class="text-xs text-center py-4" style="color: var(--color-text-muted)">加载中…</div>
+        </div>
+      </div>
+
+      <div class="card p-5">
+        <div class="flex items-center gap-2 mb-4">
+          <span class="w-2 h-2 rounded-full" style="background: var(--color-warning)"></span>
+          <span class="text-sm font-bold" style="color: var(--color-text-primary)">港股指数</span>
+        </div>
+        <div class="space-y-3">
+          <div v-for="idx in overseasIndices.hk" :key="idx.code" class="flex items-center justify-between py-2" style="border-bottom: 1px solid var(--color-border-light)">
+            <span class="text-sm" style="color: var(--color-text-secondary)">{{ idx.name }}</span>
+            <div class="text-right">
+              <span class="text-sm font-bold tabular-nums" style="color: var(--color-text-primary)">{{ idx.value }}</span>
+              <span class="text-xs ml-2 tabular-nums font-semibold" :style="{ color: idx.direction === 'up' ? 'var(--color-up)' : 'var(--color-down)' }">
+                {{ idx.change }}
+              </span>
+            </div>
+          </div>
+          <div v-if="!overseasIndices.hk.length" class="text-xs text-center py-4" style="color: var(--color-text-muted)">加载中…</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 行业板块排名 -->
+    <div class="card p-6">
+      <div class="flex items-center justify-between mb-5">
+        <div class="flex items-center gap-2">
+          <i class="ri-bar-chart-grouped-line text-lg" style="color: var(--color-primary)"></i>
+          <h3 class="text-base font-bold" style="color: var(--color-text-primary)">行业板块涨跌排名</h3>
+        </div>
+        <span class="badge" style="background: var(--color-primary-light); color: var(--color-primary)">共 {{ industryRanking.total }} 个行业</span>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- 涨幅 -->
         <div>
-          <div class="text-xs font-semibold mb-3" style="color: #dc2626">涨幅 TOP 15</div>
-          <div class="space-y-1.5">
+          <div class="flex items-center gap-2 mb-4">
+            <i class="ri-arrow-up-circle-fill" style="color: var(--color-up)"></i>
+            <span class="text-sm font-bold" style="color: var(--color-up)">涨幅 TOP 15</span>
+          </div>
+          <div class="space-y-2">
             <div
               v-for="r in industryRanking.top"
               :key="r.code"
-              class="flex items-center gap-3 py-2 px-3 rounded-lg transition-all hover:bg-gray-50"
-              style="background: #f8fafc; border: 1px solid #f1f5f9"
+              class="flex items-center gap-3 py-2.5 px-3 rounded-xl transition-all hover:translate-x-1"
+              style="background: var(--color-border-light); border: 1px solid transparent"
             >
-              <span class="text-xs font-mono w-6 text-right" style="color: #94a3b8">{{ r.rank }}</span>
-              <span class="text-xs font-semibold flex-1" style="color: #0f172a">{{ r.name }}</span>
-              <span class="text-xs" style="color: #94a3b8">领涨 {{ r.leader }}</span>
-              <span class="text-xs font-bold w-16 text-right" style="color: #dc2626">
+              <span class="text-xs font-mono w-6 text-right tabular-nums" style="color: var(--color-text-muted)">{{ r.rank }}</span>
+              <span class="text-sm font-semibold flex-1" style="color: var(--color-text-primary)">{{ r.name }}</span>
+              <span class="text-xs hidden sm:block" style="color: var(--color-text-muted)">领涨 {{ r.leader }}</span>
+              <span class="text-sm font-bold w-20 text-right tabular-nums" style="color: var(--color-up)">
                 +{{ r.change_pct }}%
               </span>
             </div>
-            <div v-if="!industryRanking.top.length" class="text-xs text-center py-4" style="color: #94a3b8">
+            <div v-if="!industryRanking.top.length" class="text-xs text-center py-6" style="color: var(--color-text-muted)">
               {{ loading ? '加载中…' : '暂无数据' }}
             </div>
           </div>
         </div>
 
-        <!-- 跌幅前15 -->
+        <!-- 跌幅 -->
         <div>
-          <div class="text-xs font-semibold mb-3" style="color: #16a34a">跌幅 TOP 15</div>
-          <div class="space-y-1.5">
+          <div class="flex items-center gap-2 mb-4">
+            <i class="ri-arrow-down-circle-fill" style="color: var(--color-down)"></i>
+            <span class="text-sm font-bold" style="color: var(--color-down)">跌幅 TOP 15</span>
+          </div>
+          <div class="space-y-2">
             <div
               v-for="r in industryRanking.bottom"
               :key="r.code"
-              class="flex items-center gap-3 py-2 px-3 rounded-lg transition-all hover:bg-gray-50"
-              style="background: #f8fafc; border: 1px solid #f1f5f9"
+              class="flex items-center gap-3 py-2.5 px-3 rounded-xl transition-all hover:translate-x-1"
+              style="background: var(--color-border-light); border: 1px solid transparent"
             >
-              <span class="text-xs font-mono w-6 text-right" style="color: #94a3b8">{{ r.rank }}</span>
-              <span class="text-xs font-semibold flex-1" style="color: #0f172a">{{ r.name }}</span>
-              <span class="text-xs" style="color: #94a3b8">领涨 {{ r.leader }}</span>
-              <span class="text-xs font-bold w-16 text-right" style="color: #16a34a">
+              <span class="text-xs font-mono w-6 text-right tabular-nums" style="color: var(--color-text-muted)">{{ r.rank }}</span>
+              <span class="text-sm font-semibold flex-1" style="color: var(--color-text-primary)">{{ r.name }}</span>
+              <span class="text-xs hidden sm:block" style="color: var(--color-text-muted)">领涨 {{ r.leader }}</span>
+              <span class="text-sm font-bold w-20 text-right tabular-nums" style="color: var(--color-down)">
                 {{ r.change_pct }}%
               </span>
             </div>
-            <div v-if="!industryRanking.bottom.length" class="text-xs text-center py-4" style="color: #94a3b8">
+            <div v-if="!industryRanking.bottom.length" class="text-xs text-center py-6" style="color: var(--color-text-muted)">
               {{ loading ? '加载中…' : '暂无数据' }}
             </div>
           </div>

@@ -85,6 +85,26 @@ export const api = {
   getAiDecisions(limit = 50) {
     return request(`/account/decisions?limit=${limit}`)
   },
+
+  // ── AI 对话 ──
+  async aiChat(messages) {
+    const resp = await fetch(`${BASE}/ai/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages }),
+    })
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+    return resp.json()
+  },
+
+  aiChatStream(messages) {
+    // 返回可读流，调用方用 reader 读取 SSE
+    return fetch(`${BASE}/ai/chat/stream`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages }),
+    })
+  },
 }
 
 export default api

@@ -11,6 +11,8 @@ from pydantic import BaseModel
 
 import stock_data
 import account_db
+import ai_service
+from fastapi.responses import StreamingResponse
 
 app = FastAPI(title="AI交易员 API", version="1.0.0")
 
@@ -291,6 +293,63 @@ def api_reset():
 def api_ai_decisions(limit: int = Query(50, ge=1, le=200)):
     """AI 决策记录。"""
     return account_db.get_ai_decisions(limit)
+
+
+# ── AI 对话 API ──────────────────────────────────────────────────────────
+
+class ChatMessage(BaseModel):
+    role: str  # user / assistant
+    content: str
+
+
+class ChatRequest(BaseModel):
+    messages: list[ChatMessage]
+
+
+def _build_account_context() -> str:
+    """构建当前账户实时上下文，注入 AI 对话。"""
+    try:
+        acct = account_db.get_account_summary()
+        holdings = acct.get("holdings", [])
+        holdings_str = "；".join(
+            f"{h['name']}({h['code']}) {h['qty']}股 成本¥{h['cost_avg']} 现价¥{h['current_price']} 盈亏{h['pnl_pct']}%"
+            for h in holdings
+        ) if holdings else "空仓"
+        return (
+            f"总资产: ¥{acct['total_assets']:,.2f}\n"
+            f"可用资金: ¥{acct['available_cash']:,.2f}\n"
+            f"持仓市值: ¥{acct['total_market_value']:,.2f}\n"
+            f"持仓: {holdings_str}\n"
+            f"累计盈亏: ¥{acct['total_pnl']:,.2f} ({acct['total_pnl_pct']}%)\n"
+            f"今日盈亏: ¥{acct['today_pnl']:,.2f}"
+        )
+    except Exception:
+        return ""
+
+
+@app.post("/api/ai/chat")
+def api_ai_chat(req: ChatRequest):
+    """非流式 AI 对话。"""
+    messages = [{"role": m.role, "content": m.content} for m in req.messages]
+    context = _build_account_context()
+    reply = ai_service.ai_chat(messages, context)
+    return {"reply": reply}
+
+
+@app.post("/api/ai/chat/stream")
+def api_ai_chat_stream(req: ChatRequest):
+    """流式 AI 对话 (SSE)。"""
+    messages = [{"role": m.role, "content": m.content} for m in req.messages]
+    context = _build_account_context()
+    return StreamingResponse(
+        ai_service.ai_chat_stream(messages, context),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 # ── 启动 ─────────────────────────────────────────────────────────────────
