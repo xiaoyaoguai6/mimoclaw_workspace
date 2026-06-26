@@ -12,6 +12,8 @@ from pydantic import BaseModel
 import stock_data
 import account_db
 import ai_service
+import stock_screener
+import screener_db
 from fastapi.responses import StreamingResponse
 
 app = FastAPI(title="AI交易员 API", version="1.0.0")
@@ -254,6 +256,10 @@ class TradeRequest(BaseModel):
 @app.on_event("startup")
 def startup():
     account_db.init_db()
+    screener_db.init_db()
+    # 清理上次异常退出残留的 running 状态
+    screener_db.set_state("init_running", "0")
+    screener_db.set_state("screen_running", "0")
 
 
 @app.get("/api/account")
@@ -350,6 +356,35 @@ def api_ai_chat_stream(req: ChatRequest):
             "X-Accel-Buffering": "no",
         },
     )
+
+
+# ── 智能选股 API ─────────────────────────────────────────────────────────
+
+@app.get("/api/screener/status")
+def api_screener_status():
+    """选股状态:初始化状态 + 进度。"""
+    return stock_screener.get_screen_progress()
+
+
+@app.post("/api/screener/initialize")
+def api_screener_initialize():
+    """首次初始化:获取所有股票 + 60天K线。"""
+    if screener_db.get_state("init_running") == "1":
+        return {"status": "already_running"}
+    result = stock_screener.initialize_stock_pool()
+    return result
+
+
+@app.post("/api/screener/refresh")
+def api_screener_refresh():
+    """刷新当天数据 + 运行选股策略(后台线程,立即返回)。"""
+    return stock_screener.refresh_and_screen()
+
+
+@app.get("/api/screener/results")
+def api_screener_results():
+    """获取选股结果 + 进度(合并到status里了,这里保留兼容)。"""
+    return stock_screener.get_screen_progress()
 
 
 # ── 启动 ─────────────────────────────────────────────────────────────────

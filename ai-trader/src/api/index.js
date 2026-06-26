@@ -105,6 +105,20 @@ export const api = {
       body: JSON.stringify({ messages }),
     })
   },
+
+  // ── 智能选股 ──
+  getScreenerStatus() {
+    return request('/screener/status')
+  },
+  initializeScreener() {
+    return request('/screener/initialize', { method: 'POST' })
+  },
+  refreshScreener() {
+    return request('/screener/refresh', { method: 'POST' })
+  },
+  getScreenerResults() {
+    return request('/screener/results')
+  },
 }
 
 export default api

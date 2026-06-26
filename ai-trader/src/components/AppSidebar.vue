@@ -10,6 +10,7 @@ const mainLinks = [
   { path: '/dashboard', icon: 'ri-dashboard-3-line', label: '总览仪表盘' },
   { path: '/news', icon: 'ri-radar-line', label: '热点新闻' },
   { path: '/stocks', icon: 'ri-line-chart-line', label: '行情概览' },
+  { path: '/screener', icon: 'ri-sword-line', label: '智能选股', badge: true },
   { path: '/simtrade', icon: 'ri-swap-line', label: '模拟交易' },
   { path: '/positions', icon: 'ri-briefcase-line', label: '交易持仓' },
 ]

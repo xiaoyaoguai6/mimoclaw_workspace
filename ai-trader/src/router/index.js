@@ -27,7 +27,13 @@ const routes = [
     path: '/stocks',
     name: 'Stocks',
     component: () => import('@/views/Stocks.vue'),
-    meta: { title: 'AI交易模拟盘' },
+    meta: { title: '行情概览' },
+  },
+  {
+    path: '/screener',
+    name: 'StockScreener',
+    component: () => import('@/views/StockScreener.vue'),
+    meta: { title: '智能选股' },
   },
   {
     path: '/simtrade',
